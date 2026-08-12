@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>⛏️ 像素生存世界 3D</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #000; font-family: "Microsoft YaHei", sans-serif; }
+        #game {
+            position: fixed; inset: 0;
+            width: 100vw; height: 100vh;
+            display: block; cursor: crosshair;
+        }
+        /* 左上操作说明 */
+        #hud {
+            position: fixed; left: 14px; top: 14px;
+            background: rgba(0, 0, 0, 0.55); color: #fff;
+            font-size: 13px; padding: 10px 14px; border-radius: 12px;
+            line-height: 1.8; z-index: 10; pointer-events: none;
+        }
+        #hud b { color: #ffd43b; }
+        /* 血量 */
+        #hpwrap {
+            position: fixed; left: 14px; bottom: 14px;
+            background: rgba(0, 0, 0, 0.55); color: #fff;
+            padding: 10px 14px; border-radius: 12px; z-index: 10; pointer-events: none;
+        }
+        #hpbar { width: 190px; height: 16px; background: #333; border-radius: 8px; margin-top: 6px; overflow: hidden; }
+        #hpfill {
+            height: 100%; width: 100%;
+            background: linear-gradient(to right, #ff6b6b, #e03131);
+            transition: width 0.2s;
+        }
+        /* 星星/经验 */
+        #starwrap {
+            position: fixed; left: 14px; bottom: 78px;
+            background: rgba(0, 0, 0, 0.55); color: #fff;
+            font-size: 14px; padding: 8px 14px; border-radius: 12px;
+            z-index: 10; pointer-events: none; line-height: 1.7;
+        }
+        #starwrap b { color: #ffd43b; }
+        #expbar { width: 150px; height: 10px; background: #333; border-radius: 5px; margin-top: 4px; overflow: hidden; }
+        #expfill { height: 100%; width: 0%; background: linear-gradient(to right, #ffd43b, #ff9f1a); transition: width 0.2s; }
+        /* 剑品质 */
+        #swordwrap {
+            position: fixed; left: 14px; bottom: 136px;
+            background: rgba(0, 0, 0, 0.55); color: #fff;
+            font-size: 14px; padding: 8px 14px; border-radius: 12px;
+            z-index: 10; pointer-events: none;
+        }
+        #swordwrap b { color: #7ee8fa; }
+        /* 昼夜阶段 */
+        #dayphase {
+            position: fixed; left: 50%; top: 14px; transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.55); color: #fff;
+            font-size: 14px; padding: 6px 14px; border-radius: 20px;
+            z-index: 10; pointer-events: none;
+        }
+        /* AI 伙伴状态 */
+        #aiui {
+            position: fixed; right: 14px; top: 14px;
+            background: rgba(0, 0, 0, 0.55); color: #fff;
+            font-size: 14px; padding: 10px 14px; border-radius: 12px;
+            z-index: 10; pointer-events: none; line-height: 1.6;
+        }
+        #aiui b { color: #ff8787; }
+        #aibar { width: 130px; height: 12px; background: #333; border-radius: 6px; margin-top: 4px; overflow: hidden; }
+        #aifill { height: 100%; width: 100%; background: linear-gradient(to right, #ff8787, #e03131); transition: width 0.2s; }
+        /* 物品栏 */
+        #hotbar {
+            position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+            display: flex; gap: 6px; z-index: 10; pointer-events: none;
+        }
+        .hot-slot {
+            position: relative; width: 48px; height: 48px;
+            background: rgba(0, 0, 0, 0.55);
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-radius: 9px; color: #fff;
+            font-size: 24px; text-align: center; line-height: 44px;
+        }
+        .hot-slot .num { position: absolute; left: 4px; top: 2px; font-size: 10px; color: #bbb; }
+        .hot-slot .cnt { position: absolute; right: 3px; bottom: 2px; font-size: 11px; color: #ffd43b; font-weight: bold; }
+        .hot-slot.sel { border-color: #ffd43b; box-shadow: 0 0 12px #ffd43b; }
+        /* 覆盖面板（背包/制作/重生） */
+        #panel {
+            position: fixed; inset: 0; display: none;
+            background: rgba(0, 0, 0, 0.72); color: #fff;
+            z-index: 40; align-items: center; justify-content: center;
+        }
+        .panel-box {
+            background: #2b3a55; border-radius: 18px;
+            padding: 26px 32px; min-width: 340px; max-width: 90vw;
+            max-height: 80vh; overflow-y: auto; text-align: center;
+        }
+        .panel-box h2 { color: #ffd43b; margin-bottom: 14px; }
+        .panel-box .row { display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 8px; }
+        .panel-box .row:nth-child(odd) { background: rgba(255, 255, 255, 0.06); }
+        .panel-box button {
+            background: #4dd0e1; color: #123; border: none; border-radius: 8px;
+            padding: 6px 12px; margin: 3px 0; cursor: pointer; font-size: 13px;
+        }
+        .panel-box button:hover { background: #8ae3ef; }
+        .panel-box .close { margin-top: 14px; background: #e64980; color: #fff; padding: 9px 26px; font-size: 15px; border-radius: 20px; }
+        /* 准星 + 暗角 */
+        #crosshair {
+            position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+            color: rgba(255, 255, 255, 0.85); font-size: 26px; line-height: 1;
+            text-shadow: 0 0 5px #000; z-index: 11; pointer-events: none;
+        }
+        #vignette {
+            position: fixed; inset: 0;
+            background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.35) 100%);
+            z-index: 9; pointer-events: none;
+        }
+        #relock {
+            position: fixed; inset: 0; display: none;
+            background: rgba(0, 0, 0, 0.55); color: #fff;
+            font-size: 26px; align-items: center; justify-content: center;
+            z-index: 30; cursor: pointer; text-shadow: 0 0 8px #000;
+        }
+        #overlay {
+            position: fixed; inset: 0;
+            background: rgba(20, 30, 50, 0.92); color: #fff;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; text-align: center; z-index: 20; cursor: pointer;
+        }
+        #overlay h1 { font-size: 44px; color: #4dd0e1; margin-bottom: 10px; text-shadow: 0 0 20px rgba(77, 208, 225, 0.6); }
+        #overlay .tip { font-size: 16px; color: #ccc; line-height: 2; margin: 16px 0; }
+        #overlay .tip b { color: #ffd43b; }
+        #overlay .start {
+            font-size: 22px; padding: 13px 40px; border-radius: 40px;
+            background: #4dd0e1; color: #123; border: none; cursor: pointer; font-weight: bold;
+        }
+        #overlay .start:hover { background: #8ae3ef; }
+    </style>
+</head>
+<body>
+    <canvas id="game"></canvas>
+
+    <!-- HUD：说明 -->
+    <div id="hud">
+        <b>Q</b> 前进 ｜ <b>R</b> 左 ｜ <b>W</b> 右 ｜ <b>S</b> 下 ｜ <b>空格</b> 跳<br>
+        <b>鼠标左键</b> 挖方块 ｜ <b>右键</b> 放方块<br>
+        <b>E</b> 背包 ｜ <b>C</b> 制作台 ｜ <b>F</b> 吃食物 ｜ <b>D</b> 退出 ｜ <b>1-8</b> 选物品
+    </div>
+
+    <!-- HUD：血量 -->
+    <div id="hpwrap">
+        ❤️ 生命：<span id="hpNum">100</span>
+        <div id="hpbar"><div id="hpfill"></div></div>
+    </div>
+
+    <!-- HUD：星星 + 经验 -->
+    <div id="starwrap">
+        ⭐ 星星：<b id="starNum">0</b> 颗<br>
+        经验：<span id="expNum">0</span> / <span id="expNeed">20</span>
+        <div id="expbar"><div id="expfill"></div></div>
+    </div>
+
+    <!-- HUD：剑品质 -->
+    <div id="swordwrap">⚔️ <b id="swordName">木剑</b>（伤害 <span id="swordDmgTxt">10-15</span>）</div>
+
+    <!-- HUD：昼夜阶段 -->
+    <div id="dayphase">☀️ 白天</div>
+
+    <!-- HUD：AI 伙伴 -->
+    <div id="aiui">
+        🔴 AI伙伴 Lv.<b id="aiLevelNum">1</b><br>
+        ⚔️ 攻击 <span id="aiAtkNum">6</span>
+        <div id="aibar"><div id="aifill"></div></div>
+    </div>
+
+    <!-- HUD：物品栏 -->
+    <div id="hotbar"></div>
+
+    <div id="crosshair">+</div>
+    <div id="vignette"></div>
+
+    <!-- 背包/制作/重生面板 -->
+    <div id="panel">
+        <div class="panel-box" id="panelBox"></div>
+    </div>
+
+    <div id="relock">🔒 点击重新锁定鼠标，继续游戏</div>
+
+    <div id="overlay">
+        <h1>⛏️ 像素生存世界 3D</h1>
+        <div class="tip">
+            🖱️ <b>鼠标</b>：转动视角（第一人称）<br>
+            <b>Q</b> 前进 ｜ <b>R</b> 左移 ｜ <b>W</b> 右移 ｜ <b>S</b> 下降 ｜ <b>空格</b> 跳<br>
+            <b>左键</b> 挖方块 ｜ <b>右键</b> 放方块 ｜ <b>E</b> 背包 ｜ <b>C</b> 制作台 ｜ <b>F</b> 吃食物 ｜ <b>D</b> 退出<br>
+            🐷🐑🐮🐔 树林里有小动物，还有村民哦！
+        </div>
+        <button class="start">▶ 点击进入世界（全屏）</button>
+    </div>
+
+    <script>
+        // ===== 画布 =====
+        var canvas = document.getElementById("game");
+        var ctx = canvas.getContext("2d");
+        var cx = canvas.width, cy = canvas.height;
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            cx = canvas.width; cy = canvas.height;
+        }
+        resize();
+        window.addEventListener("resize", resize);
+
+        // ===== 方块信息 =====
+        var BLOCK_INFO = {
+            grass: { name: "草",      icon: "🌱", top: "#7ed957", side: "#4a8f34", h: 52 },
+            dirt:  { name: "泥土",    icon: "🟫", top: "#d2a05c", side: "#b98a3e", h: 50 },
+            stone: { name: "石头",    icon: "🪨", top: "#c8ced4", side: "#9aa0a6", h: 50 },
+            tree:  { name: "木头",    icon: "🌲", top: "#5fc04f", side: "#2e7d32", h: 82 },
+            gem:   { name: "钻石",    icon: "💎", top: "#8ff5ff", side: "#4dd0e1", h: 46 },
+            bread: { name: "面包",    icon: "🍞", top: "#ffe08a", side: "#f7c948", h: 40 },
+            plank: { name: "木板",    icon: "🪵", top: "#e0b98a", side: "#c49a63", h: 50 },
+            brick: { name: "石砖",    icon: "🧱", top: "#b0b6bc", side: "#8d9399", h: 50 }
+        };
+
+        // ===== 世界数据 =====
+        var blocks = [];      // {x,y,z,w,h,d,top,side,type}
+        var animals = [];
+        var holes = [];       // 被挖开的地面坑 {x, z}（对齐 8 网格）
+        var bag = { grass: 0, dirt: 0, stone: 0, tree: 0, gem: 0, bread: 0, plank: 0, brick: 0 };
+        var hp = 100, dead = false;
+        var fallStartY = null;
+
+        // ===== 吃食物补血 =====
+        var FOODS = {
+            bread: { name: "面包", heal: 20 },
+            grass: { name: "草", heal: 3 }
+        };
+        function eatFood() {
+            if (paused || dead) return;
+            var sel = HOTBAR[hotSel];
+            if (!sel) { hudMsg("❗ 先选中一个食物（数字键 1-8）"); return; }
+            var f = FOODS[sel];
+            if (!f || bag[sel] <= 0) {
+                var nm = BLOCK_INFO[sel] ? BLOCK_INFO[sel].name : sel;
+                hudMsg("😖 " + nm + " 不能吃……（面包才行！）");
+                return;
+            }
+            if (hp >= 100) { hudMsg("❤️ 生命已经满了，不用吃"); return; }
+            bag[sel]--;
+            hp = Math.min(100, hp + f.heal);
+            updateHotbar();
+            updateHP();
+            hudMsg("😋 吃了" + f.name + "，生命 +" + f.heal + "！");
+        }
+
+        // ===== 剑品质系统 =====
+        var swordQuality = 0;   // 0 木剑 ｜ 1 石剑 ｜ 2 钻石剑
+        var SWORDS = [
+            { name: "木剑", dmg: 10, blade: "#c49a63", guard: "#8d6e63" },
+            { name: "石剑", dmg: 14, blade: "#a8b0b8", guard: "#6c757d" },
+            { name: "钻石剑", dmg: 20, blade: "#7ee8fa", guard: "#38b6d8" }
+        ];
+        var FORGE = [
+            null,
+            { plank: 4, stone: 2, label: "4 木板 + 2 石头" },
+            { brick: 3, gem: 2, label: "3 石砖 + 2 钻石" }
+        ];
+        function swordDmg() { return SWORDS[swordQuality].dmg + Math.floor(Math.random() * 6); }
+        function updateSwordUI() {
+            var sw = SWORDS[swordQuality];
+            document.getElementById("swordName").textContent = sw.name;
+            document.getElementById("swordDmgTxt").textContent = sw.dmg + "-" + (sw.dmg + 5);
+        }
+        function forge(q) {
+            var fg = FORGE[q];
+            for (var need in fg) {
+                if (need === "label") continue;
+                if (bag[need] < fg[need]) return;
+            }
+            for (var need2 in fg) {
+                if (need2 === "label") continue;
+                bag[need2] -= fg[need2];
+            }
+            swordQuality = q;
+            updateHotbar();
+            updateSwordUI();
+            hudMsg("⚔️ 锻造成功！现在用 " + SWORDS[q].name + "，伤害更高了！");
+            openCraft();
+        }
+
+        // ===== 星星系统 =====
+        var playerExp = 0, stars = 0, deathCount = 0;
+        // 攒星所需经验：星星越多越难攒（二次增长）
+        function starNeed() { return 20 + stars * 10 + stars * stars * 5; }
+        function gainPlayerExp(n) {
+            playerExp += n;
+            while (playerExp >= starNeed()) {
+                playerExp -= starNeed();
+                stars++;
+                hudMsg("⭐ 攒到一颗星！现在共 " + stars + " 颗！下一颗要 " + starNeed() + " 经验");
+            }
+            updateStarUI();
+        }
+        function updateStarUI() {
+            document.getElementById("starNum").textContent = stars;
+            document.getElementById("expNum").textContent = playerExp;
+            document.getElementById("expNeed").textContent = starNeed();
+            document.getElementById("expfill").style.width = Math.min(playerExp / starNeed() * 100, 100) + "%";
+        }
+
+        // ===== 战斗系统 =====
+        var monsters3d = [];
+        var golems = [];      // 村庄铁傀儡
+        var nightTimer = 0;   // 夜晚刷怪计时
+        var swordSwing = 0, swingHitDone = false;
+        var aiX = 0, aiZ = 0, aiLevel = 1, aiExp = 0;
+        var aiHP = 40, aiMaxHP = 40, aiAtk = 6, aiAtkCd = 0;
+        var MONSTER_TYPES = [
+            { name: "僵尸", body: "#5c9d4f", head: "#4a8740", hp: 30, dmg: 5 },
+            { name: "骷髅", body: "#e8e8e8", head: "#f0f0f0", hp: 25, dmg: 4 }
+        ];
+        var ANIMAL_NAMES = { pig: "猪", sheep: "羊", cow: "牛", chicken: "鸡", villager: "村民" };
+        function spawnAnimal() {
+            var animalTypes = ["pig", "sheep", "cow", "chicken"];
+            animals.push({ x: (Math.random() * 44) - 22, z: (Math.random() * 44) - 22, dir: Math.random() * Math.PI * 2, type: animalTypes[Math.floor(Math.random() * animalTypes.length)], hp: 20, maxHp: 20 });
+        }
+        function spawnMonster() {
+            var t = MONSTER_TYPES[Math.floor(Math.random() * MONSTER_TYPES.length)];
+            var ang = Math.random() * Math.PI * 2, dist = 14 + Math.random() * 14;
+            monsters3d.push({ x: cam.x + Math.sin(ang) * dist, z: cam.z + Math.cos(ang) * dist, dir: 0, type: t, hp: t.hp, atkCd: 0 });
+        }
+
+        // ===== 昼夜系统 =====
+        // 0-0.45 白天 ｜ 0.45-0.62 天黑 ｜ 0.62-1 夜晚（120 秒一循环）
+        function dayPhase() {
+            var t = (performance.now() / 1000) % 120 / 120;
+            if (t < 0.45) return "day";
+            if (t < 0.62) return "dusk";
+            return "night";
+        }
+        function updateDayPhase() {
+            var p = dayPhase();
+            document.getElementById("dayphase").textContent =
+                p === "day" ? "☀️ 白天" : (p === "dusk" ? "🌆 天黑" : "🌙 夜晚");
+        }
+
+        // ===== 村民房子 =====
+        function buildHouse(hx, hz) {
+            var wallTop = "#c49a63", wallSide = "#a37b4a";
+            blocks.push({ x: hx, y: 0.12, z: hz, w: 3.4, h: 0.24, d: 3.4, top: wallTop, side: wallSide, type: "plank" });
+            blocks.push({ x: hx, y: 0.9, z: hz - 1.6, w: 3.2, h: 1.6, d: 0.25, top: wallTop, side: wallSide, type: "plank" });
+            blocks.push({ x: hx - 1.6, y: 0.9, z: hz, w: 0.25, h: 1.6, d: 3.2, top: wallTop, side: wallSide, type: "plank" });
+            blocks.push({ x: hx + 1.6, y: 0.9, z: hz, w: 0.25, h: 1.6, d: 3.2, top: wallTop, side: wallSide, type: "plank" });
+            // 前墙留 1 米门洞（玩家能走进去）
+            blocks.push({ x: hx - 1.0, y: 0.9, z: hz + 1.6, w: 1.0, h: 1.6, d: 0.25, top: wallTop, side: wallSide, type: "plank" });
+            blocks.push({ x: hx + 1.0, y: 0.9, z: hz + 1.6, w: 1.0, h: 1.6, d: 0.25, top: wallTop, side: wallSide, type: "plank" });
+            blocks.push({ x: hx, y: 1.85, z: hz, w: 4.2, h: 0.3, d: 4.2, top: "#c0392b", side: "#922b21", type: "plank" });
+        }
+
+        // ===== 铁傀儡（村庄守卫） =====
+        function drawGolem(g) {
+            var x = g.x, z = g.z, fx = Math.sin(g.dir), fz = Math.cos(g.dir);
+            var iron = "#b8bfc6", dark = "#8a9299", eye = "#ff4d4d";
+            drawBox({ x: x - 0.3, y: 0.4, z: z, w: 0.4, h: 0.8, d: 0.4, top: iron, side: iron });
+            drawBox({ x: x + 0.3, y: 0.4, z: z, w: 0.4, h: 0.8, d: 0.4, top: iron, side: iron });
+            drawBox({ x: x, y: 1.5, z: z, w: 1.1, h: 1.1, d: 0.7, top: iron, side: dark });
+            drawBox({ x: x - fz * 0.8, y: 1.6, z: z + fx * 0.8, w: 0.35, h: 0.9, d: 0.35, top: iron, side: iron });
+            drawBox({ x: x + fz * 0.8, y: 1.6, z: z - fx * 0.8, w: 0.35, h: 0.9, d: 0.35, top: iron, side: iron });
+            drawBox({ x: x, y: 2.35, z: z, w: 0.6, h: 0.55, d: 0.6, top: iron, side: iron });
+            drawBox({ x: x + fx * 0.28 - fz * 0.12, y: 2.38, z: z + fz * 0.28 + fx * 0.12, w: 0.08, h: 0.08, d: 0.03, top: eye, side: eye });
+            drawBox({ x: x + fx * 0.28 + fz * 0.12, y: 2.38, z: z + fz * 0.28 - fx * 0.12, w: 0.08, h: 0.08, d: 0.03, top: eye, side: eye });
+        }
+        function updateGolems() {
+            for (var gi = 0; gi < golems.length; gi++) {
+                var g = golems[gi];
+                if (g.hp <= 0) continue;
+                g.atkCd--;
+                var bestM = null, bestD = 1e9;
+                for (var mi = 0; mi < monsters3d.length; mi++) {
+                    var m = monsters3d[mi];
+                    if (m.hp <= 0) continue;
+                    var ddx = m.x - g.x, ddz = m.z - g.z;
+                    var d2 = Math.sqrt(ddx * ddx + ddz * ddz);
+                    if (d2 < 8 && d2 < bestD) { bestD = d2; bestM = m; }
+                }
+                if (bestM) {
+                    g.dir = Math.atan2(bestM.x - g.x, bestM.z - g.z);
+                    if (bestD > 1.7) { g.x += Math.sin(g.dir) * 0.07; g.z += Math.cos(g.dir) * 0.07; }
+                    else if (g.atkCd <= 0) {
+                        g.atkCd = 40;
+                        bestM.hp -= 15;
+                        hudMsg("🤖 铁傀儡一拳打向" + bestM.type.name + "！(-15)");
+                        if (bestM.hp <= 0) { bestM.hp = 0; hudMsg("🛡️ 铁傀儡消灭了一只" + bestM.type.name + "！"); }
+                    }
+                } else {
+                    var dx = g.vx - g.x, dz = g.vz - g.z;
+                    var dd = Math.sqrt(dx * dx + dz * dz);
+                    if (dd > 3) { g.dir = Math.atan2(dx, dz); g.x += Math.sin(g.dir) * 0.04; g.z += Math.cos(g.dir) * 0.04; }
+                }
+            }
+        }
+
+        function genWorld() {
+            for (var i = 0; i < 22; i++) {
+                var x = (Math.random() * 50) - 25, z = (Math.random() * 50) - 25;
+                blocks.push({ x: x, y: 0.5, z: z, w: 0.6, h: 2.2, d: 0.6, top: "#8d6e63", side: "#6d4c41", type: "tree" });
+                blocks.push({ x: x, y: 2.4, z: z, w: 2.0, h: 1.8, d: 2.0, top: "#58c04f", side: "#2e7d32", type: "tree" });
+            }
+            for (var j = 0; j < 10; j++) {
+                var rx = (Math.random() * 46) - 23, rz = (Math.random() * 46) - 23;
+                blocks.push({ x: rx, y: 0.35, z: rz, w: 0.9, h: 0.7, d: 0.9, top: "#c8ced4", side: "#8a9096", type: "stone" });
+            }
+            var decoColors = [["#ff6b6b", "#d63f3f"], ["#ffd43b", "#e0b01f"], ["#4dabf7", "#2f8ad4"], ["#da77f2", "#b44ad4"]];
+            for (var k = 0; k < 8; k++) {
+                var dx = (Math.random() * 44) - 22, dz = (Math.random() * 44) - 22;
+                var c = decoColors[k % decoColors.length];
+                blocks.push({ x: dx, y: 0.5, z: dz, w: 1, h: 1, d: 1, top: c[0], side: c[1], type: "dirt" });
+            }
+            var animalTypes = ["pig", "sheep", "cow", "chicken"];
+            for (var m = 0; m < 12; m++) {
+                animals.push({ x: (Math.random() * 44) - 22, z: (Math.random() * 44) - 22, dir: Math.random() * Math.PI * 2, type: animalTypes[Math.floor(Math.random() * animalTypes.length)], hp: 20, maxHp: 20 });
+            }
+            // 村庄：3 栋房子 + 村民 + 铁傀儡
+            for (var n = 0; n < 3; n++) {
+                var hx = (Math.random() * 26) - 13, hz = (Math.random() * 26) - 13;
+                buildHouse(hx, hz);
+                animals.push({ x: hx, z: hz + 2.4, dir: Math.PI, type: "villager", hp: 30, maxHp: 30, vx: hx, vz: hz });
+                golems.push({ x: hx + 2.6, z: hz + 2.6, hp: 60, maxHp: 60, vx: hx, vz: hz, dir: 0, atkCd: 0 });
+            }
+        }
+
+        // ===== 相机 =====
+        var cam = { x: 0, y: 2.8, z: 0, yaw: 0, pitch: -0.3, vy: 0 };
+        var keys = {};
+        var onGround = true;
+        var paused = false;
+
+        // ===== 3D 数学：透视投影 =====
+        function project(wx, wy, wz) {
+            var dx = wx - cam.x, dy = wy - cam.y, dz = wz - cam.z;
+            var x1 = dx * Math.cos(cam.yaw) - dz * Math.sin(cam.yaw);
+            var z1 = dx * Math.sin(cam.yaw) + dz * Math.cos(cam.yaw);
+            var y2 = dy * Math.cos(cam.pitch) - z1 * Math.sin(cam.pitch);
+            var z2 = dy * Math.sin(cam.pitch) + z1 * Math.cos(cam.pitch);
+            var behind = z2 <= 0.1;
+            var zz = behind ? 0.1 : z2;
+            var f = cx * 0.9;
+            return { sx: cx / 2 + x1 / zz * f, sy: cy / 2 - y2 / zz * f, z: z2, behind: behind };
+        }
+
+        function drawBox(b) {
+            var x = b.x, y = b.y, z = b.z, w = b.w, h = b.h, d = b.d;
+            var cpr = project(x, y, z);
+            if (cpr.behind) return;
+            var vs = [
+                [x - w / 2, y - h / 2, z - d / 2], [x + w / 2, y - h / 2, z - d / 2],
+                [x + w / 2, y + h / 2, z - d / 2], [x - w / 2, y + h / 2, z - d / 2],
+                [x - w / 2, y - h / 2, z + d / 2], [x + w / 2, y - h / 2, z + d / 2],
+                [x + w / 2, y + h / 2, z + d / 2], [x - w / 2, y + h / 2, z + d / 2]
+            ];
+            var faces = [
+                { idx: [4, 5, 6, 7], n: [0, 0, 1],  c: b.side },
+                { idx: [1, 0, 3, 2], n: [0, 0, -1], c: b.side },
+                { idx: [5, 1, 2, 6], n: [1, 0, 0],  c: b.side },
+                { idx: [0, 4, 7, 3], n: [-1, 0, 0], c: b.side },
+                { idx: [3, 7, 6, 2], n: [0, 1, 0],  c: b.top },
+                { idx: [0, 1, 5, 4], n: [0, -1, 0], c: b.side }
+            ];
+            var vx = cam.x - x, vy = cam.y - y, vz = cam.z - z;
+            for (var f = 0; f < faces.length; f++) {
+                var face = faces[f];
+                if (face.n[0] * vx + face.n[1] * vy + face.n[2] * vz >= 0) continue;
+                var pts = [];
+                var ok = true;
+                for (var v = 0; v < 4; v++) {
+                    var p = project(vs[face.idx[v]][0], vs[face.idx[v]][1], vs[face.idx[v]][2]);
+                    if (!p) { ok = false; break; }
+                    pts.push(p);
+                }
+                if (!ok) continue;
+                ctx.fillStyle = face.c;
+                ctx.beginPath();
+                ctx.moveTo(pts[0].sx, pts[0].sy);
+                for (var q = 1; q < 4; q++) ctx.lineTo(pts[q].sx, pts[q].sy);
+                ctx.closePath();
+                ctx.fill();
+                // 纹理线（按方块类型画出纹路）
+                var tex = b.type;
+                if (tex === "plank") texLines(pts, "rgba(0,0,0,0.28)", 3, 0);
+                else if (tex === "stone" || tex === "brick") { texLines(pts, "rgba(0,0,0,0.24)", 2, 0); texLines(pts, "rgba(0,0,0,0.24)", 2, 1); }
+                else if (tex === "dirt") texLines(pts, "rgba(0,0,0,0.16)", 2, 0);
+                else if (tex === "grass") { texLines(pts, "rgba(20,100,35,0.5)", 2, 0); texLines(pts, "rgba(20,100,35,0.5)", 2, 1); }
+                else if (tex === "tree") texLines(pts, "rgba(0,0,0,0.32)", 3, 1);
+                else if (tex === "gem") { texLines(pts, "rgba(255,255,255,0.45)", 2, 0); texLines(pts, "rgba(255,255,255,0.45)", 2, 1); }
+                else if (tex === "bread") { texLines(pts, "rgba(150,70,0,0.4)", 3, 0); texLines(pts, "rgba(150,70,0,0.4)", 3, 1); }
+            }
+        }
+
+        // 在投影四边形上画等分纹理线（0=沿 0-1 边方向，1=沿 0-3 边方向）
+        function texLines(pts, color, n, dir) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (var i = 1; i < n; i++) {
+                var t = i / n;
+                if (dir === 0) {
+                    var a = { x: pts[0].sx + (pts[1].sx - pts[0].sx) * t, y: pts[0].sy + (pts[1].sy - pts[0].sy) * t };
+                    var b = { x: pts[3].sx + (pts[2].sx - pts[3].sx) * t, y: pts[3].sy + (pts[2].sy - pts[3].sy) * t };
+                } else {
+                    var a = { x: pts[0].sx + (pts[3].sx - pts[0].sx) * t, y: pts[0].sy + (pts[3].sy - pts[0].sy) * t };
+                    var b = { x: pts[1].sx + (pts[2].sx - pts[1].sx) * t, y: pts[1].sy + (pts[2].sy - pts[1].sy) * t };
+                }
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
+            }
+            ctx.stroke();
+        }
+
+        // ===== 碰撞检测：玩家不能穿过方块 =====
+        function playerCollides(x, y, z) {
+            var pb = { x0: x - 0.3, x1: x + 0.3, y0: y - 1.5, y1: y + 0.1, z0: z - 0.3, z1: z + 0.3 };
+            for (var i = 0; i < blocks.length; i++) {
+                var b = blocks[i];
+                if (pb.x0 < b.x + b.w / 2 && pb.x1 > b.x - b.w / 2 &&
+                    pb.y0 < b.y + b.h / 2 && pb.y1 > b.y - b.h / 2 &&
+                    pb.z0 < b.z + b.d / 2 && pb.z1 > b.z - b.d / 2) return true;
+            }
+            return false;
+        }
+
+        // ===== 动物/村民：具体造型 =====
+        function drawCreature(a) {
+            var x = a.x, z = a.z, fx = Math.sin(a.dir), fz = Math.cos(a.dir);
+            var t = a.type;
+            if (t === "pig") drawPig(x, z, fx, fz);
+            else if (t === "sheep") drawSheep(x, z, fx, fz);
+            else if (t === "cow") drawCow(x, z, fx, fz);
+            else if (t === "chicken") drawChicken(x, z, fx, fz);
+            else drawVillager(x, z, fx, fz);
+        }
+
+        function drawPig(x, z, fx, fz) {
+            var pink = "#f2a3c0", dark = "#d17a9d";
+            var legs = [[-0.22, -0.3], [0.22, -0.3], [-0.22, 0.3], [0.22, 0.3]];
+            for (var i = 0; i < 4; i++)
+                drawBox({ x: x + legs[i][0], y: 0.15, z: z + legs[i][1], w: 0.18, h: 0.3, d: 0.18, top: dark, side: dark });
+            drawBox({ x: x, y: 0.55, z: z, w: 0.7, h: 0.55, d: 0.95, top: pink, side: pink });
+            var hx = x + fx * 0.5, hz = z + fz * 0.5;
+            drawBox({ x: hx, y: 0.95, z: hz, w: 0.4, h: 0.35, d: 0.4, top: pink, side: pink });
+            drawBox({ x: hx + fx * 0.28, y: 0.92, z: hz + fz * 0.28, w: 0.22, h: 0.12, d: 0.1, top: dark, side: dark });
+            drawBox({ x: hx - fz * 0.24, y: 1.2, z: hz + fx * 0.24, w: 0.14, h: 0.14, d: 0.1, top: dark, side: dark });
+            drawBox({ x: hx + fz * 0.24, y: 1.2, z: hz - fx * 0.24, w: 0.14, h: 0.14, d: 0.1, top: dark, side: dark });
+        }
+        function drawSheep(x, z, fx, fz) {
+            var wool = "#f8f8f2", dark = "#4a4a4a";
+            var legs = [[-0.25, -0.35], [0.25, -0.35], [-0.25, 0.35], [0.25, 0.35]];
+            for (var i = 0; i < 4; i++)
+                drawBox({ x: x + legs[i][0], y: 0.15, z: z + legs[i][1], w: 0.16, h: 0.3, d: 0.16, top: dark, side: dark });
+            drawBox({ x: x, y: 0.6, z: z, w: 0.8, h: 0.6, d: 1.05, top: wool, side: wool });
+            drawBox({ x: x, y: 0.98, z: z, w: 0.6, h: 0.26, d: 0.85, top: wool, side: wool });
+            var hx = x + fx * 0.55, hz = z + fz * 0.55;
+            drawBox({ x: hx, y: 0.85, z: hz, w: 0.38, h: 0.3, d: 0.38, top: dark, side: dark });
+        }
+        function drawCow(x, z, fx, fz) {
+            var brown = "#a06a42", white = "#f5f0e6", horn = "#e8dcc0";
+            var legs = [[-0.24, -0.35], [0.24, -0.35], [-0.24, 0.35], [0.24, 0.35]];
+            for (var i = 0; i < 4; i++)
+                drawBox({ x: x + legs[i][0], y: 0.15, z: z + legs[i][1], w: 0.18, h: 0.3, d: 0.18, top: brown, side: brown });
+            drawBox({ x: x, y: 0.55, z: z, w: 0.75, h: 0.6, d: 1.1, top: brown, side: brown });
+            drawBox({ x: x + 0.1, y: 0.75, z: z - 0.3, w: 0.3, h: 0.22, d: 0.3, top: white, side: white });
+            var hx = x + fx * 0.6, hz = z + fz * 0.6;
+            drawBox({ x: hx, y: 0.9, z: hz, w: 0.42, h: 0.36, d: 0.42, top: brown, side: brown });
+            drawBox({ x: hx + fx * 0.24, y: 0.86, z: hz + fz * 0.24, w: 0.2, h: 0.18, d: 0.12, top: white, side: white });
+            drawBox({ x: hx - fz * 0.2, y: 1.14, z: hz + fx * 0.2, w: 0.1, h: 0.16, d: 0.1, top: horn, side: horn });
+            drawBox({ x: hx + fz * 0.2, y: 1.14, z: hz - fx * 0.2, w: 0.1, h: 0.16, d: 0.1, top: horn, side: horn });
+        }
+        function drawChicken(x, z, fx, fz) {
+            var body = "#fff2cc", red = "#ff6b6b", orange = "#ffa94d";
+            drawBox({ x: x - 0.08, y: 0.12, z: z, w: 0.08, h: 0.24, d: 0.08, top: orange, side: orange });
+            drawBox({ x: x + 0.08, y: 0.12, z: z, w: 0.08, h: 0.24, d: 0.08, top: orange, side: orange });
+            drawBox({ x: x, y: 0.42, z: z, w: 0.5, h: 0.42, d: 0.55, top: body, side: body });
+            var hx = x + fx * 0.35, hz = z + fz * 0.35;
+            drawBox({ x: hx, y: 0.72, z: hz, w: 0.28, h: 0.28, d: 0.28, top: body, side: body });
+            drawBox({ x: hx, y: 0.92, z: hz, w: 0.16, h: 0.1, d: 0.16, top: red, side: red });
+            drawBox({ x: hx + fx * 0.19, y: 0.68, z: hz + fz * 0.19, w: 0.12, h: 0.07, d: 0.08, top: orange, side: orange });
+        }
+        function drawVillager(x, z, fx, fz) {
+            var skin = "#f2c49b", cloth = "#4a90d9", dark = "#2b3a55", hair = "#5b4632";
+            drawBox({ x: x - 0.12, y: 0.25, z: z, w: 0.16, h: 0.5, d: 0.16, top: dark, side: dark });
+            drawBox({ x: x + 0.12, y: 0.25, z: z, w: 0.16, h: 0.5, d: 0.16, top: dark, side: dark });
+            drawBox({ x: x, y: 0.85, z: z, w: 0.55, h: 0.7, d: 0.35, top: cloth, side: cloth });
+            drawBox({ x: x - fz * 0.42, y: 0.95, z: z + fx * 0.42, w: 0.12, h: 0.5, d: 0.12, top: cloth, side: cloth });
+            drawBox({ x: x + fz * 0.42, y: 0.95, z: z - fx * 0.42, w: 0.12, h: 0.5, d: 0.12, top: cloth, side: cloth });
+            var hx = x + fx * 0.15, hz = z + fz * 0.15;
+            drawBox({ x: hx, y: 1.35, z: hz, w: 0.42, h: 0.42, d: 0.42, top: skin, side: skin });
+            drawBox({ x: hx, y: 1.58, z: hz, w: 0.44, h: 0.12, d: 0.44, top: hair, side: hair });
+            var ex = hx + fx * 0.24, ez = hz + fz * 0.24;
+            drawBox({ x: ex - fz * 0.1, y: 1.4, z: ez + fx * 0.1, w: 0.06, h: 0.06, d: 0.02, top: "#1a1a1a", side: "#1a1a1a" });
+            drawBox({ x: ex + fz * 0.1, y: 1.4, z: ez - fx * 0.1, w: 0.06, h: 0.06, d: 0.02, top: "#1a1a1a", side: "#1a1a1a" });
+        }
+
+        // ===== 怪物（僵尸/骷髅） =====
+        function drawMonster(m) {
+            var x = m.x, z = m.z, fx = Math.sin(m.dir), fz = Math.cos(m.dir);
+            drawBox({ x: x - 0.15, y: 0.3, z: z, w: 0.18, h: 0.6, d: 0.18, top: m.type.body, side: m.type.body });
+            drawBox({ x: x + 0.15, y: 0.3, z: z, w: 0.18, h: 0.6, d: 0.18, top: m.type.body, side: m.type.body });
+            drawBox({ x: x, y: 1.0, z: z, w: 0.7, h: 0.9, d: 0.4, top: m.type.body, side: m.type.body });
+            var hx = x + fx * 0.25, hz = z + fz * 0.25;
+            drawBox({ x: hx, y: 1.65, z: hz, w: 0.45, h: 0.4, d: 0.45, top: m.type.head, side: m.type.head });
+            // 眼睛
+            drawBox({ x: hx + fx * 0.24 - fz * 0.09, y: 1.68, z: hz + fz * 0.24 + fx * 0.09, w: 0.06, h: 0.06, d: 0.02, top: "#111", side: "#111" });
+            drawBox({ x: hx + fx * 0.24 + fz * 0.09, y: 1.68, z: hz + fz * 0.24 - fx * 0.09, w: 0.06, h: 0.06, d: 0.02, top: "#111", side: "#111" });
+            // 血量条（头顶）
+            var pp = project(hx, 2.15, hz);
+            if (pp && !pp.behind) {
+                var bw = 46;
+                ctx.fillStyle = "rgba(0,0,0,0.6)";
+                ctx.fillRect(pp.sx - bw / 2, pp.sy - 4, bw, 6);
+                ctx.fillStyle = "#ff6b6b";
+                ctx.fillRect(pp.sx - bw / 2 + 1, pp.sy - 3, (bw - 2) * Math.max(m.hp / m.type.hp, 0), 4);
+            }
+        }
+
+        // ===== AI 伙伴（红色村民造型，跟随玩家） =====
+        function drawAI() {
+            var x = aiX, z = aiZ, fx = Math.sin(cam.yaw), fz = Math.cos(cam.yaw);
+            var skin = "#f2c49b", cloth = "#e03131", dark = "#7a1f1f", hair = "#5b4632";
+            drawBox({ x: x - 0.12, y: 0.25, z: z, w: 0.16, h: 0.5, d: 0.16, top: dark, side: dark });
+            drawBox({ x: x + 0.12, y: 0.25, z: z, w: 0.16, h: 0.5, d: 0.16, top: dark, side: dark });
+            drawBox({ x: x, y: 0.85, z: z, w: 0.55, h: 0.7, d: 0.35, top: cloth, side: cloth });
+            drawBox({ x: x - fz * 0.42, y: 0.95, z: z + fx * 0.42, w: 0.12, h: 0.5, d: 0.12, top: cloth, side: cloth });
+            drawBox({ x: x + fz * 0.42, y: 0.95, z: z - fx * 0.42, w: 0.12, h: 0.5, d: 0.12, top: cloth, side: cloth });
+            var hx = x + fx * 0.15, hz = z + fz * 0.15;
+            drawBox({ x: hx, y: 1.35, z: hz, w: 0.42, h: 0.42, d: 0.42, top: skin, side: skin });
+            drawBox({ x: hx, y: 1.58, z: hz, w: 0.44, h: 0.12, d: 0.44, top: hair, side: hair });
+            var ex = hx + fx * 0.24, ez = hz + fz * 0.24;
+            drawBox({ x: ex - fz * 0.1, y: 1.4, z: ez + fx * 0.1, w: 0.06, h: 0.06, d: 0.02, top: "#1a1a1a", side: "#1a1a1a" });
+            drawBox({ x: ex + fz * 0.1, y: 1.4, z: ez - fx * 0.1, w: 0.06, h: 0.06, d: 0.02, top: "#1a1a1a", side: "#1a1a1a" });
+            // 头顶等级
+            var pp = project(hx, 2.05, hz);
+            if (pp && !pp.behind) {
+                ctx.fillStyle = "#fff";
+                ctx.font = "13px serif";
+                ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.fillText("🔴 Lv." + aiLevel, pp.sx, pp.sy);
+            }
+        }
+
+        // ===== 第一人称剑（屏幕右下角，挥动动画） =====
+        function drawSword() {
+            var sw = SWORDS[swordQuality];
+            var bx = cx - 190, by = cy - 30;
+            ctx.save();
+            var angle = (1 - Math.min(swordSwing, 1)) * 1.7 - 0.35;
+            ctx.translate(bx, by);
+            ctx.rotate(-angle);
+            // 剑身（随品质变色）
+            ctx.fillStyle = sw.blade;
+            ctx.fillRect(-6, -150, 12, 120);
+            ctx.strokeStyle = "#555"; ctx.lineWidth = 1; ctx.strokeRect(-6, -150, 12, 120);
+            // 剑尖
+            ctx.beginPath();
+            ctx.moveTo(-6, -150); ctx.lineTo(0, -188); ctx.lineTo(6, -150);
+            ctx.closePath(); ctx.fillStyle = sw.blade; ctx.fill();
+            // 护手（随品质变色）
+            ctx.fillStyle = sw.guard;
+            ctx.fillRect(-20, -32, 40, 8);
+            // 剑柄
+            ctx.fillStyle = "#6d4c41";
+            ctx.fillRect(-5, -32, 10, 40);
+            // 柄尾
+            ctx.fillStyle = sw.guard;
+            ctx.fillRect(-7, 8, 14, 8);
+            ctx.restore();
+        }
+
+        function swingSword() { swordSwing = 1; swingHitDone = false; }
+
+        // 挥剑命中检测 + 伤害（怪物或动物都可以砍）
+        function swordHit() {
+            var dx = Math.sin(cam.yaw), dz = Math.cos(cam.yaw);
+            var best = null, bestD = 1e9, kind = null;
+            // 怪物
+            for (var i = 0; i < monsters3d.length; i++) {
+                var m = monsters3d[i];
+                if (m.hp <= 0) continue;
+                var mx = m.x - cam.x, mz = m.z - cam.z;
+                var d2 = Math.sqrt(mx * mx + mz * mz);
+                if (d2 < 4.5 && d2 < bestD && (mx * dx + mz * dz) / (d2 || 1) > 0.5) { bestD = d2; best = m; kind = "monster"; }
+            }
+            // 动物
+            for (var j = 0; j < animals.length; j++) {
+                var an = animals[j];
+                if (an.hp <= 0) continue;
+                var ax = an.x - cam.x, az = an.z - cam.z;
+                var ad = Math.sqrt(ax * ax + az * az);
+                if (ad < 4.5 && ad < bestD && (ax * dx + az * dz) / (ad || 1) > 0.5) { bestD = ad; best = an; kind = "animal"; }
+            }
+            // 铁傀儡
+            for (var gi = 0; gi < golems.length; gi++) {
+                var gl = golems[gi];
+                if (gl.hp <= 0) continue;
+                var gx2 = gl.x - cam.x, gz2 = gl.z - cam.z;
+                var gd = Math.sqrt(gx2 * gx2 + gz2 * gz2);
+                if (gd < 4.5 && gd < bestD && (gx2 * dx + gz2 * dz) / (gd || 1) > 0.5) { bestD = gd; best = gl; kind = "golem"; }
+            }
+            if (best) {
+                var dmg = swordDmg();
+                best.hp -= dmg;
+                var nm = kind === "monster" ? best.type.name : (kind === "golem" ? "铁傀儡" : ANIMAL_NAMES[best.type]);
+                hudMsg("⚔️ 你用" + SWORDS[swordQuality].name + "砍了" + nm + "一剑！(-" + dmg + ")");
+                if (best.hp <= 0) {
+                    if (kind === "monster") killMonster(best);
+                    else if (kind === "animal") killAnimal(best);
+                    else {
+                        best.hp = 0;
+                        bag.stone += 3;
+                        gainPlayerExp(10);
+                        updateHotbar();
+                        hudMsg("💥 铁傀儡被你打倒了！石头×3，经验+10");
+                    }
+                }
+            } else {
+                hudMsg("💨 挥空了……怪物或动物在哪儿？");
+            }
+        }
+
+        function killAnimal(a) {
+            a.hp = 0;
+            var dropPool = ["bread", "dirt", "stone", "plank"];
+            var drop = dropPool[Math.floor(Math.random() * dropPool.length)];
+            bag[drop]++;
+            aiExp += 6;
+            gainPlayerExp(6);
+            updateHotbar();
+            var msg = "💀 打败了" + ANIMAL_NAMES[a.type] + "！掉落 " + BLOCK_INFO[drop].name + "×1，经验 +6";
+            msg = aiLevelUpCheck(msg);
+            hudMsg(msg);
+            updateAIUI();
+            setTimeout(spawnAnimal, 5000);
+        }
+
+        // AI 升级检查（打怪和打动物共用）
+        function aiLevelUpCheck(msg) {
+            while (aiExp >= aiLevel * 20) {
+                aiExp -= aiLevel * 20;
+                aiLevel++;
+                aiMaxHP += 10; aiHP = aiMaxHP; aiAtk += 2;
+                msg += "  🎉🔴 AI伙伴升级到 Lv." + aiLevel + "！（攻击+" + aiAtk + "）";
+            }
+            return msg;
+        }
+
+        function killMonster(m) {
+            m.hp = 0;
+            bag.stone += 2; bag.dirt += 1;
+            aiExp += 12;
+            gainPlayerExp(12);
+            updateHotbar();
+            var msg = aiLevelUpCheck("💀 打败" + m.type.name + "！掉落石头×2、泥土×1，经验 +12");
+            hudMsg(msg);
+            updateAIUI();
+            // 夜晚才会重新刷新怪物（白天不刷）
+        }
+
+        // 生物头顶血条（受伤后显示）
+        function drawHpBar(x, y, z, hp, max) {
+            var pp = project(x, y, z);
+            if (!pp || pp.behind) return;
+            var bw = 44;
+            ctx.fillStyle = "rgba(0,0,0,0.6)";
+            ctx.fillRect(pp.sx - bw / 2, pp.sy - 3, bw, 5);
+            ctx.fillStyle = "#51cf66";
+            ctx.fillRect(pp.sx - bw / 2 + 1, pp.sy - 2, (bw - 2) * Math.max(hp / max, 0), 3);
+        }
+
+        // AI 伙伴移动 + 攻击
+        function updateAI() {
+            var tx = cam.x - Math.sin(cam.yaw) * 2.2 + Math.cos(cam.yaw) * 1.5;
+            var tz = cam.z - Math.cos(cam.yaw) * 2.2 - Math.sin(cam.yaw) * 1.5;
+            aiX += (tx - aiX) * 0.05;
+            aiZ += (tz - aiZ) * 0.05;
+            aiAtkCd--;
+            if (aiAtkCd <= 0) {
+                var bestM = null, bestD = 1e9;
+                for (var i = 0; i < monsters3d.length; i++) {
+                    var m = monsters3d[i];
+                    if (m.hp <= 0) continue;
+                    var mx = m.x - aiX, mz = m.z - aiZ;
+                    var d2 = Math.sqrt(mx * mx + mz * mz);
+                    if (d2 < 7 && d2 < bestD) { bestD = d2; bestM = m; }
+                }
+                if (bestM) {
+                    aiAtkCd = 90;
+                    bestM.hp -= aiAtk;
+                    hudMsg("🔴 AI伙伴攻击" + bestM.type.name + "！(-" + aiAtk + ")");
+                    if (bestM.hp <= 0) killMonster(bestM);
+                }
+            }
+        }
+
+        function updateAIUI() {
+            document.getElementById("aiLevelNum").textContent = aiLevel;
+            document.getElementById("aiAtkNum").textContent = aiAtk;
+            document.getElementById("aifill").style.width = (aiHP / aiMaxHP * 100) + "%";
+        }
+
+        // ===== 地面 =====
+        function drawGround() {
+            var g = 64, cell = 8;
+            for (var gx = -g; gx < g; gx += cell) {
+                for (var gz = -g; gz < g; gz += cell) {
+                    // 被挖开的地面画成深坑
+                    var holed = false;
+                    for (var hi = 0; hi < holes.length; hi++) {
+                        if (holes[hi].x === gx && holes[hi].z === gz) { holed = true; break; }
+                    }
+                    if (holed) {
+                        var hc = project(gx + cell / 2, 0, gz + cell / 2);
+                        if (hc.behind) continue;
+                        var hp0 = project(gx, 0, gz);
+                        var hp1 = project(gx + cell, 0, gz);
+                        var hp2 = project(gx + cell, 0, gz + cell);
+                        var hp3 = project(gx, 0, gz + cell);
+                        ctx.fillStyle = "#2b2118";
+                        ctx.beginPath();
+                        ctx.moveTo(hp0.sx, hp0.sy);
+                        ctx.lineTo(hp1.sx, hp1.sy);
+                        ctx.lineTo(hp2.sx, hp2.sy);
+                        ctx.lineTo(hp3.sx, hp3.sy);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.strokeStyle = "#0d0a07";
+                        ctx.stroke();
+                        continue;
+                    }
+                    var cc = project(gx + cell / 2, 0, gz + cell / 2);
+                    if (cc.behind) continue;
+                    var p0 = project(gx, 0, gz);
+                    var p1 = project(gx + cell, 0, gz);
+                    var p2 = project(gx + cell, 0, gz + cell);
+                    var p3 = project(gx, 0, gz + cell);
+                    var even = Math.round((gx + gz) / cell) % 2 === 0;
+                    ctx.fillStyle = even ? "#5aa548" : "#4f9440";
+                    if (Math.abs((gx * 7 + gz * 13) % 11) < 2) ctx.fillStyle = "#7ac860";
+                    ctx.beginPath();
+                    ctx.moveTo(p0.sx, p0.sy);
+                    ctx.lineTo(p1.sx, p1.sy);
+                    ctx.lineTo(p2.sx, p2.sy);
+                    ctx.lineTo(p3.sx, p3.sy);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.strokeStyle = "rgba(0, 0, 0, 0.08)";
+                    ctx.stroke();
+                    if (Math.abs((gx * 31 + gz * 17) % 23) < 3) {
+                        var fc = ["#ff6b6b", "#ffd43b", "#fff3bf"][Math.abs(gx * 3 + gz) % 3];
+                        var pc = project(gx + cell / 2, 0.05, gz + cell / 2);
+                        if (pc && !pc.behind) {
+                            ctx.fillStyle = fc;
+                            ctx.beginPath();
+                            ctx.arc(pc.sx, pc.sy, 2.5, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
+        }
+
+        // ===== 射线与方块交互 =====
+        function rayBox(ox, oy, oz, dx, dy, dz, x0, y0, z0, x1, y1, z1) {
+            var tmin = 0, tmax = 1e9;
+            if (Math.abs(dx) < 1e-9) { if (ox < x0 || ox > x1) return null; }
+            else {
+                var t1 = (x0 - ox) / dx, t2 = (x1 - ox) / dx;
+                if (t1 > t2) { var tmp = t1; t1 = t2; t2 = tmp; }
+                tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
+                if (tmin > tmax) return null;
+            }
+            if (Math.abs(dy) < 1e-9) { if (oy < y0 || oy > y1) return null; }
+            else {
+                var t3 = (y0 - oy) / dy, t4 = (y1 - oy) / dy;
+                if (t3 > t4) { var tmp2 = t3; t3 = t4; t4 = tmp2; }
+                tmin = Math.max(tmin, t3); tmax = Math.min(tmax, t4);
+                if (tmin > tmax) return null;
+            }
+            if (Math.abs(dz) < 1e-9) { if (oz < z0 || oz > z1) return null; }
+            else {
+                var t5 = (z0 - oz) / dz, t6 = (z1 - oz) / dz;
+                if (t5 > t6) { var tmp3 = t5; t5 = t6; t6 = tmp3; }
+                tmin = Math.max(tmin, t5); tmax = Math.min(tmax, t6);
+                if (tmin > tmax) return null;
+            }
+            return tmin;
+        }
+
+        function raycast() {
+            var dx = Math.sin(cam.yaw) * Math.cos(cam.pitch);
+            var dy = -Math.sin(cam.pitch);
+            var dz = Math.cos(cam.yaw) * Math.cos(cam.pitch);
+            var best = null, bestT = 1e9;
+            for (var i = 0; i < blocks.length; i++) {
+                var b = blocks[i];
+                var t = rayBox(cam.x, cam.y, cam.z, dx, dy, dz,
+                    b.x - b.w / 2, b.y - b.h / 2, b.z - b.d / 2,
+                    b.x + b.w / 2, b.y + b.h / 2, b.z + b.d / 2);
+                if (t !== null && t > 0 && t < bestT) { bestT = t; best = b; }
+            }
+            return best;
+        }
+
+        // ===== 地面与射线 =====
+        // 射线撞到地面(y=0)的交点（向下看才有效）
+        function groundHit() {
+            var dy = -Math.sin(cam.pitch);
+            if (dy > -0.05) return null;
+            var t = -cam.y / dy;
+            if (t <= 0 || t > 16) return null;
+            return {
+                t: t,
+                x: cam.x + Math.sin(cam.yaw) * Math.cos(cam.pitch) * t,
+                z: cam.z + Math.cos(cam.yaw) * Math.cos(cam.pitch) * t
+            };
+        }
+
+        // 挖方块（左键）：先看有没有方块，否则挖地面
+        function mineBlock() {
+            if (paused || dead) return;
+            var hit = raycast();
+            if (hit) {
+                for (var i = 0; i < blocks.length; i++) {
+                    if (blocks[i] === hit) {
+                        bag[hit.type]++;
+                        blocks.splice(i, 1);
+                        break;
+                    }
+                }
+                updateHotbar();
+                hudMsg("⛏️ 挖到 1 个" + BLOCK_INFO[hit.type].name + "！");
+                return;
+            }
+            // 挖地面：在脚下挖出 8x8 像素坑
+            var gh = groundHit();
+            if (!gh) return;
+            var cellX = Math.round(gh.x / 8) * 8, cellZ = Math.round(gh.z / 8) * 8;
+            var dup = false;
+            for (var h2 = 0; h2 < holes.length; h2++) {
+                if (holes[h2].x === cellX && holes[h2].z === cellZ) { dup = true; break; }
+            }
+            if (dup) { hudMsg("🕳️ 这里已经挖过了～"); return; }
+            holes.push({ x: cellX, z: cellZ });
+            bag.grass++; bag.dirt++;
+            updateHotbar();
+            hudMsg("⛏️ 挖开地面！草×1、泥土×1，留了个大坑 🕳️");
+        }
+
+        // 放方块（右键）
+        function placeBlock() {
+            if (paused || dead) return;
+            var sel = HOTBAR[hotSel];
+            if (!sel || bag[sel] <= 0) { hudMsg("❗ 选中物品数量为 0，先挖一些吧！"); return; }
+            var info = BLOCK_INFO[sel];
+            var hit = raycast();
+            if (hit) {
+                // 命中方块 → 放到方块旁边
+                var t = bestTForPlace();
+                if (!t) return;
+                var px = cam.x + t.dirx * t.t, py = cam.y + t.diry * t.t, pz = cam.z + t.dirz * t.t;
+                var ax = px - hit.x, ay = py - hit.y, az = pz - hit.z;
+                var nx2 = 0, ny2 = 0, nz2 = 0;
+                if (Math.abs(ax) > Math.abs(ay) && Math.abs(ax) > Math.abs(az)) nx2 = ax > 0 ? 1 : -1;
+                else if (Math.abs(ay) > Math.abs(ax) && Math.abs(ay) > Math.abs(az)) ny2 = ay > 0 ? 1 : -1;
+                else nz2 = az > 0 ? 1 : -1;
+                var newX = hit.x + nx2 * (hit.w / 2 + 0.5);
+                var newY = hit.y + ny2 * (hit.h / 2 + 0.5);
+                var newZ = hit.z + nz2 * (hit.d / 2 + 0.5);
+                blocks.push({ x: newX, y: newY, z: newZ, w: 1, h: 1, d: 1, top: info.top, side: info.side, type: sel });
+                bag[sel]--;
+                updateHotbar();
+                hudMsg("🧱 放置了 1 个" + info.name + "！");
+                return;
+            }
+            // 没撞到方块 → 放在地面上
+            var gh = groundHit();
+            if (!gh) { hudMsg("❗ 没地方放，看远一点试试"); return; }
+            var gx = Math.round(gh.x), gz = Math.round(gh.z);
+            if (Math.sqrt((gx - cam.x) * (gx - cam.x) + (gz - cam.z) * (gz - cam.z)) < 1.3) {
+                hudMsg("❗ 别放在自己脚下");
+                return;
+            }
+            blocks.push({ x: gx, y: 0.5, z: gz, w: 1, h: 1, d: 1, top: info.top, side: info.side, type: sel });
+            bag[sel]--;
+            updateHotbar();
+            hudMsg("🧱 在地面上放置了 1 个" + info.name + "！");
+        }
+
+        function bestTForPlace() {
+            var dx = Math.sin(cam.yaw) * Math.cos(cam.pitch);
+            var dy = -Math.sin(cam.pitch);
+            var dz = Math.cos(cam.yaw) * Math.cos(cam.pitch);
+            var best = null, bestT = 1e9;
+            for (var i = 0; i < blocks.length; i++) {
+                var b = blocks[i];
+                var t = rayBox(cam.x, cam.y, cam.z, dx, dy, dz,
+                    b.x - b.w / 2, b.y - b.h / 2, b.z - b.d / 2,
+                    b.x + b.w / 2, b.y + b.h / 2, b.z + b.d / 2);
+                if (t !== null && t > 0 && t < bestT) { bestT = t; best = b; }
+            }
+            if (!best) return null;
+            return { t: bestT, dirx: dx, diry: dy, dirz: dz };
+        }
+
+        // ===== 物品栏 =====
+        var HOTBAR = ["grass", "dirt", "stone", "tree", "gem", "bread", "plank", "brick"];
+        var hotSel = 0;
+        var hotEls = [];
+
+        function buildHotbar() {
+            var hb = document.getElementById("hotbar");
+            hb.innerHTML = "";
+            hotEls = [];
+            for (var i = 0; i < HOTBAR.length; i++) {
+                var s = document.createElement("div");
+                s.className = "hot-slot";
+                var info = BLOCK_INFO[HOTBAR[i]];
+                s.innerHTML = '<span class="num">' + (i + 1) + '</span>' + info.icon + '<span class="cnt" id="hotcnt' + i + '">0</span>';
+                hb.appendChild(s);
+                hotEls.push(s);
+            }
+            updateHotbar();
+        }
+        function updateHotbar() {
+            for (var i = 0; i < HOTBAR.length; i++) {
+                document.getElementById("hotcnt" + i).textContent = bag[HOTBAR[i]];
+                hotEls[i].className = "hot-slot" + (i === hotSel ? " sel" : "");
+            }
+        }
+
+        // ===== 血量 =====
+        function updateHP() {
+            if (hp < 0) hp = 0;
+            document.getElementById("hpNum").textContent = Math.floor(hp);
+            document.getElementById("hpfill").style.width = hp + "%";
+        }
+        function hudMsg(m) {
+            document.getElementById("hud").innerHTML = m + "<br>" +
+                '<b>Q</b> 前进 ｜ <b>R</b> 左 ｜ <b>W</b> 右 ｜ <b>S</b> 下 ｜ <b>空格</b> 跳<br>' +
+                '<b>左键</b> 挖 ｜ <b>右键</b> 放 ｜ <b>E</b> 背包 ｜ <b>C</b> 制作 ｜ <b>D</b> 退出';
+        }
+
+        // ===== 面板（背包/制作/重生） =====
+        function showPanel(html) {
+            document.getElementById("panelBox").innerHTML = html;
+            document.getElementById("panel").style.display = "flex";
+            if (document.pointerLockElement) document.exitPointerLock();
+            paused = true;
+        }
+        function hidePanel() {
+            document.getElementById("panel").style.display = "none";
+            paused = false;
+            if (!dead) canvas.requestPointerLock();
+        }
+        function openBag() {
+            var h = "<h2>🎒 我的背包</h2>";
+            var keys = Object.keys(bag);
+            var any = false;
+            for (var i = 0; i < keys.length; i++) {
+                var k = keys[i];
+                if (bag[k] > 0) { any = true; h += '<div class="row"><span>' + BLOCK_INFO[k].icon + ' ' + BLOCK_INFO[k].name + '</span><span>× ' + bag[k] + '</span></div>'; }
+            }
+            if (!any) h += '<div style="color:#999">背包空空如也，去挖点方块吧！⛏️</div>';
+            h += '<button class="close" onclick="hidePanel()">关闭</button>';
+            showPanel(h);
+        }
+        var RECIPES = [
+            { out: "plank", need: { tree: 2 }, label: "🪵 木板：2 木头 → 1 木板" },
+            { out: "brick", need: { stone: 3 }, label: "🧱 石砖：3 石头 → 1 石砖" },
+            { out: "bread", need: { grass: 2, dirt: 1 }, label: "🍞 面包：2 草 + 1 泥土 → 1 面包" }
+        ];
+        function openCraft() {
+            var h = "<h2>🛠️ 制作台</h2>";
+            for (var i = 0; i < RECIPES.length; i++) {
+                var r = RECIPES[i];
+                var ok = true;
+                for (var need in r.need) if (bag[need] < r.need[need]) ok = false;
+                var dis = ok ? "" : "disabled style='opacity:0.5'";
+                h += '<div class="row"><span>' + r.label + '</span>' +
+                     '<button ' + dis + ' onclick="craft(' + i + ')">制作</button></div>';
+            }
+            // 锻造剑
+            h += '<h2 style="margin-top:16px">⚔️ 锻造剑</h2>';
+            var sw = SWORDS[swordQuality];
+            h += '<div class="row"><span>当前：' + sw.name + '（伤害 ' + sw.dmg + '-' + (sw.dmg + 5) + '）</span></div>';
+            for (var q = swordQuality + 1; q < SWORDS.length; q++) {
+                var fg = FORGE[q];
+                var ok2 = true;
+                for (var need2 in fg) {
+                    if (need2 === "label") continue;
+                    if (bag[need2] < fg[need2]) ok2 = false;
+                }
+                var dis2 = ok2 ? "" : "disabled style='opacity:0.5'";
+                h += '<div class="row"><span>🔨 升级为 ' + SWORDS[q].name + '：' + fg.label + '</span>' +
+                     '<button ' + dis2 + ' onclick="forge(' + q + ')">锻造</button></div>';
+            }
+            h += '<div class="row"><button class="close" onclick="hidePanel()">关闭</button></div>';
+            showPanel(h);
+        }
+        function craft(i) {
+            var r = RECIPES[i];
+            for (var need in r.need) {
+                if (bag[need] < r.need[need]) return;
+            }
+            for (var need2 in r.need) bag[need2] -= r.need[need2];
+            bag[r.out]++;
+            updateHotbar();
+            openCraft();   // 刷新界面
+        }
+
+        // ===== 死亡 =====
+        function showDeath() {
+            deathCount++;
+            var lose = deathCount;   // 第几次死就扣几颗星
+            stars = Math.max(0, stars - lose);
+            updateStarUI();
+            showPanel('<h2>💀 你死了</h2>' +
+                '<div style="color:#ccc;margin-bottom:10px">第 ' + deathCount + ' 次死亡，扣除 ' + lose + ' 颗星 ⭐（剩下 ' + stars + ' 颗）</div>' +
+                '<button class="close" onclick="respawn()">✨ 重生</button>');
+        }
+        function respawn() {
+            hp = 100;
+            cam.x = 0; cam.y = 2.8; cam.z = 0;
+            cam.vy = 0; cam.yaw = 0; cam.pitch = -0.3;
+            dead = false;
+            updateHP();
+            hidePanel();
+        }
+
+        // ===== 主循环 =====
+        function frame() {
+            var sky = ctx.createLinearGradient(0, 0, 0, cy);
+            sky.addColorStop(0, "#5ec4f2");
+            sky.addColorStop(0.75, "#bde8fa");
+            sky.addColorStop(1, "#cdeec9");
+            ctx.fillStyle = sky;
+            ctx.fillRect(0, 0, cx, cy);
+
+            if (!paused && !dead) {
+                var sp = 0.16;
+                // 水平移动（逐轴碰撞检测，不能穿方块）
+                var mx = 0, mz = 0;
+                if (keys["KeyQ"]) { mx += Math.sin(cam.yaw); mz += Math.cos(cam.yaw); }
+                if (keys["KeyR"]) { mx -= Math.cos(cam.yaw); mz += Math.sin(cam.yaw); }
+                if (keys["KeyW"]) { mx += Math.cos(cam.yaw); mz -= Math.sin(cam.yaw); }
+                if (mx !== 0 || mz !== 0) {
+                    var ml = Math.sqrt(mx * mx + mz * mz);
+                    mx = mx / ml * sp; mz = mz / ml * sp;
+                    if (!playerCollides(cam.x + mx, cam.y, cam.z)) cam.x += mx;
+                    if (!playerCollides(cam.x, cam.y, cam.z + mz)) cam.z += mz;
+                }
+                // S 下降（有方块挡着就下不去）
+                if (keys["KeyS"]) { if (!playerCollides(cam.x, cam.y - sp * 0.8, cam.z)) cam.y -= sp * 0.8; }
+                // 跳跃：跳 1 格高（约 1.3 米），能跳上方块
+                if (keys["Space"]) { if (onGround) { cam.vy = 0.95; onGround = false; fallStartY = cam.y; } }
+                cam.vy -= 0.35;
+                var ny = cam.y + cam.vy;
+                if (cam.vy <= 0) {
+                    // 下落：找脚下支撑方块
+                    var stand = null;
+                    for (var bi = 0; bi < blocks.length; bi++) {
+                        var bb = blocks[bi];
+                        var by1 = bb.y + bb.h / 2;
+                        if (cam.x > bb.x - bb.w / 2 - 0.3 && cam.x < bb.x + bb.w / 2 + 0.3 &&
+                            cam.z > bb.z - bb.d / 2 - 0.3 && cam.z < bb.z + bb.d / 2 + 0.3) {
+                            if (by1 <= cam.y - 1.5 + 0.01 && by1 >= ny - 1.5 - 0.12 && (stand === null || by1 > stand)) stand = by1;
+                        }
+                    }
+                    if (stand !== null) {
+                        cam.y = stand + 1.5;
+                        cam.vy = 0;
+                        if (!onGround) {
+                            onGround = true;
+                            if (fallStartY !== null && fallStartY - cam.y > 4) {
+                                var dmg = Math.round((fallStartY - cam.y - 4) * 5);
+                                hp -= dmg;
+                                hudMsg("💥 摔落受伤 -" + dmg + " 生命！");
+                                updateHP();
+                                if (hp <= 0) { dead = true; showDeath(); }
+                            }
+                            fallStartY = null;
+                        }
+                    } else if (ny - 1.5 <= 0) {
+                        cam.y = 1.5; cam.vy = 0;
+                        if (!onGround) {
+                            onGround = true;
+                            if (fallStartY !== null && fallStartY - cam.y > 4) {
+                                var dmg = Math.round((fallStartY - cam.y - 4) * 5);
+                                hp -= dmg;
+                                hudMsg("💥 摔落受伤 -" + dmg + " 生命！");
+                                updateHP();
+                                if (hp <= 0) { dead = true; showDeath(); }
+                            }
+                            fallStartY = null;
+                        }
+                    } else {
+                        cam.y = ny;
+                        onGround = false;
+                    }
+                } else {
+                    // 上升：头顶碰到方块就停
+                    if (playerCollides(cam.x, ny, cam.z)) cam.vy = 0;
+                    else cam.y = ny;
+                }
+                if (cam.x > 28) cam.x = 28; if (cam.x < -28) cam.x = -28;
+                if (cam.z > 28) cam.z = 28; if (cam.z < -28) cam.z = -28;
+                if (cam.y > 20) cam.y = 20;
+
+                for (var i = 0; i < animals.length; i++) {
+                    var a = animals[i];
+                    if (a.hp <= 0) continue;
+                    if (Math.random() < 0.01) a.dir = Math.random() * Math.PI * 2;
+                    a.x += Math.sin(a.dir) * 0.03;
+                    a.z += Math.cos(a.dir) * 0.03;
+                    if (a.x > 26 || a.x < -26) a.dir = Math.PI - a.dir;
+                    if (a.z > 26 || a.z < -26) a.dir = -a.dir;
+                    // 村民待在房子附近（vx/vz 是房子位置）
+                    if (a.vx !== undefined) {
+                        if (Math.abs(a.x - a.vx) > 4.5) a.dir = Math.PI - a.dir;
+                        if (Math.abs(a.z - a.vz) > 4.5) a.dir = -a.dir;
+                    }
+                }
+
+                // 怪物：追击玩家 + 咬人
+                for (var mi = 0; mi < monsters3d.length; mi++) {
+                    var m = monsters3d[mi];
+                    if (m.hp <= 0) continue;
+                    var mdx = cam.x - m.x, mdz = cam.z - m.z;
+                    var mdist = Math.sqrt(mdx * mdx + mdz * mdz);
+                    m.dir = Math.atan2(mdx, mdz);
+                    if (mdist < 14) { m.x += Math.sin(m.dir) * 0.05; m.z += Math.cos(m.dir) * 0.05; }
+                    else { if (Math.random() < 0.01) m.dir = Math.random() * Math.PI * 2; m.x += Math.sin(m.dir) * 0.03; m.z += Math.cos(m.dir) * 0.03; }
+                    if (mdist < 1.9) {
+                        m.atkCd--;
+                        if (m.atkCd <= 0) {
+                            m.atkCd = 55;
+                            hp -= m.type.dmg;
+                            hudMsg("👹 " + m.type.name + " 咬了你 -" + m.type.dmg + "！");
+                            updateHP();
+                            if (hp <= 0) { dead = true; showDeath(); }
+                        }
+                    }
+                }
+                updateAI();
+                updateGolems();
+
+                // 夜晚/天黑才补怪，白天不刷新
+                nightTimer++;
+                var phase = dayPhase();
+                if ((phase === "night" || phase === "dusk") && nightTimer > 150) {
+                    nightTimer = 0;
+                    var aliveM = 0;
+                    for (var mi2 = 0; mi2 < monsters3d.length; mi2++) if (monsters3d[mi2].hp > 0) aliveM++;
+                    if (aliveM < 3) {
+                        spawnMonster();
+                        var lastM = monsters3d[monsters3d.length - 1];
+                        hudMsg("🌙 夜晚，一只" + lastM.type.name + "从黑暗中出现了……");
+                    }
+                }
+
+                // 挥剑动画
+                if (swordSwing > 0) {
+                    swordSwing -= 0.035;
+                    if (!swingHitDone && swordSwing < 0.78) { swingHitDone = true; swordHit(); }
+                }
+            }
+
+            drawGround();
+
+            var items = [];
+            for (var b = 0; b < blocks.length; b++) {
+                var bb = blocks[b];
+                var p = project(bb.x, bb.y, bb.z);
+                if (p && !p.behind) items.push({ z: p.z, fn: (function (blk) { return function () { drawBox(blk); }; })(bb) });
+            }
+            for (var c = 0; c < animals.length; c++) {
+                (function (an) {
+                    var p = project(an.x, 1, an.z);
+                    if (p && !p.behind && an.hp > 0) items.push({ z: p.z, fn: function () { drawCreature(an); if (an.hp < an.maxHp) drawHpBar(an.x, 2.2, an.z, an.hp, an.maxHp); } });
+                })(animals[c]);
+            }
+            // 怪物
+            for (var mo = 0; mo < monsters3d.length; mo++) {
+                (function (mm) {
+                    var p = project(mm.x, 1, mm.z);
+                    if (p && !p.behind) items.push({ z: p.z, fn: function () { drawMonster(mm); } });
+                })(monsters3d[mo]);
+            }
+            // AI 伙伴
+            (function () {
+                var p = project(aiX, 1, aiZ);
+                if (p && !p.behind) items.push({ z: p.z, fn: drawAI });
+            })();
+            // 铁傀儡
+            for (var gi2 = 0; gi2 < golems.length; gi2++) {
+                (function (gl) {
+                    var p = project(gl.x, 1.5, gl.z);
+                    if (p && !p.behind && gl.hp > 0) items.push({ z: p.z, fn: function () { drawGolem(gl); if (gl.hp < gl.maxHp) drawHpBar(gl.x, 3, gl.z, gl.hp, gl.maxHp); } });
+                })(golems[gi2]);
+            }
+            items.sort(function (A, B) { return B.z - A.z; });
+            for (var d = 0; d < items.length; d++) items[d].fn();
+
+            // 昼夜（白天 / 天黑 / 夜晚）
+            var ph = dayPhase();
+            updateDayPhase();
+            if (ph === "night") ctx.fillStyle = "rgba(8, 12, 40, 0.55)";
+            else if (ph === "dusk") ctx.fillStyle = "rgba(60, 35, 80, 0.22)";
+            else ctx.fillStyle = "rgba(255, 210, 130, 0.04)";
+            ctx.fillRect(0, 0, cx, cy);
+
+            // 剑（第一人称，最上层）
+            if (swordSwing > 0) drawSword();
+
+            requestAnimationFrame(frame);
+        }
+
+        // ===== 输入 =====
+        document.addEventListener("keydown", function (e) {
+            if (e.code === "KeyD") { window.location.href = "index.html"; return; }
+            if (e.code === "KeyE") { openBag(); return; }
+            if (e.code === "KeyC") { openCraft(); return; }
+            if (e.code === "KeyF") { eatFood(); return; }
+            var n = parseInt(e.key, 10);
+            if (n >= 1 && n <= 8) { hotSel = n - 1; updateHotbar(); return; }
+            keys[e.code] = true;
+        });
+        document.addEventListener("keyup", function (e) { keys[e.code] = false; });
+
+        document.addEventListener("mousedown", function (e) {
+            if (!document.pointerLockElement) return;
+            if (e.button === 0) {
+                // 面前有怪物或动物 → 挥剑；否则挖方块
+                var dx = Math.sin(cam.yaw), dz = Math.cos(cam.yaw);
+                var hitCreature = false;
+                for (var mi = 0; mi < monsters3d.length; mi++) {
+                    var m = monsters3d[mi];
+                    if (m.hp <= 0) continue;
+                    var mx = m.x - cam.x, mz = m.z - cam.z;
+                    var d2 = Math.sqrt(mx * mx + mz * mz);
+                    if (d2 < 4.5 && (mx * dx + mz * dz) / (d2 || 1) > 0.5) { hitCreature = true; break; }
+                }
+                if (!hitCreature) {
+                    for (var ai2 = 0; ai2 < animals.length; ai2++) {
+                        var an = animals[ai2];
+                        if (an.hp <= 0) continue;
+                        var ax = an.x - cam.x, az = an.z - cam.z;
+                        var ad = Math.sqrt(ax * ax + az * az);
+                        if (ad < 4.5 && (ax * dx + az * dz) / (ad || 1) > 0.5) { hitCreature = true; break; }
+                    }
+                }
+                if (!hitCreature) {
+                    for (var gi3 = 0; gi3 < golems.length; gi3++) {
+                        var gl2 = golems[gi3];
+                        if (gl2.hp <= 0) continue;
+                        var gx3 = gl2.x - cam.x, gz3 = gl2.z - cam.z;
+                        var gd3 = Math.sqrt(gx3 * gx3 + gz3 * gz3);
+                        if (gd3 < 4.5 && (gx3 * dx + gz3 * dz) / (gd3 || 1) > 0.5) { hitCreature = true; break; }
+                    }
+                }
+                if (hitCreature) swingSword();
+                else mineBlock();
+            }
+            else if (e.button === 2) placeBlock();
+        });
+        document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+        // 滚轮选物品
+        document.addEventListener("wheel", function (e) {
+            if (!document.pointerLockElement) return;
+            hotSel = (hotSel + (e.deltaY > 0 ? 1 : -1) + HOTBAR.length) % HOTBAR.length;
+            updateHotbar();
+        });
+
+        // 鼠标视角
+        var mouseDown = false;
+        canvas.addEventListener("mousedown", function () { mouseDown = true; });
+        document.addEventListener("mouseup", function () { mouseDown = false; });
+        document.addEventListener("mousemove", function (e) {
+            if ((document.pointerLockElement || mouseDown) && !paused) {
+                cam.yaw += e.movementX * 0.0025;
+                cam.pitch -= e.movementY * 0.0025;
+                if (cam.pitch > 1.3) cam.pitch = 1.3;
+                if (cam.pitch < -1.3) cam.pitch = -1.3;
+            }
+        });
+
+        var relock = document.getElementById("relock");
+        document.addEventListener("pointerlockchange", function () {
+            relock.style.display = document.pointerLockElement ? "none" : "flex";
+        });
+        relock.addEventListener("click", function () {
+            if (!paused && !dead) canvas.requestPointerLock();
+        });
+
+        // 开始
+        var overlay = document.getElementById("overlay");
+        overlay.addEventListener("click", function () {
+            overlay.style.display = "none";
+            try { document.documentElement.requestFullscreen(); } catch (err) {}
+            canvas.requestPointerLock();
+        });
+
+        // ===== 开始 =====
+        genWorld();
+        spawnMonster();
+        spawnMonster();
+        spawnMonster();
+        buildHotbar();
+        updateHP();
+        updateAIUI();
+        updateStarUI();
+        updateSwordUI();
+        frame();
+    </script>
+</body>
+</html>

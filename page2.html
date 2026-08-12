@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>🛫 飞行棋 · 冒险小游戏</title>
+    <style>
+        body {
+            background: linear-gradient(to bottom, #aee6ff, #e8f7ff);
+            color: #333;
+            font-family: "Microsoft YaHei", sans-serif;
+            text-align: center;
+            margin: 0;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #ff8c00;
+            font-size: 52px;
+            margin-top: 45px;
+            text-shadow: 2px 2px 0 #fff;
+        }
+        .welcome { font-size: 18px; color: #4a90d9; }
+        .game-area {
+            display: inline-block;
+            margin: 25px auto;
+            padding: 25px 35px;
+            background: #fff;
+            border-radius: 20px;
+            border: 4px solid #ffd43b;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+            max-width: 620px;
+        }
+        .game-area h2 { margin-top: 0; color: #ff8c00; }
+
+        /* ===== 飞行棋 ===== */
+        .ludo-flex {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+        .ludo-area canvas {
+            border: 3px solid #d4a017;
+            border-radius: 16px;
+            background: #fffaf0;
+            cursor: pointer;
+        }
+        .ludo-side { min-width: 210px; }
+        .rules {
+            font-size: 12.5px;
+            color: #888;
+            text-align: left;
+            background: #f8f4e8;
+            border-radius: 10px;
+            padding: 8px 12px;
+            margin-top: 10px;
+            line-height: 1.7;
+        }
+        .btn-reset { background: #845ef7; display: none; }
+
+        /* ===== 3D 立体骰子 ===== */
+        .dice3d { width: 88px; height: 88px; perspective: 340px; margin: 8px auto; }
+        .cube {
+            position: relative; width: 100%; height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.3, 1);
+            cursor: pointer;
+        }
+        .face {
+            position: absolute; width: 88px; height: 88px;
+            background: linear-gradient(145deg, #ffffff, #e6e6e6);
+            border: 2px solid #b0b0b0; border-radius: 14px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.08);
+        }
+        .f-front  { transform: rotateY(0deg)    translateZ(44px); }
+        .f-back   { transform: rotateY(180deg)  translateZ(44px); }
+        .f-right  { transform: rotateY(90deg)   translateZ(44px); }
+        .f-left   { transform: rotateY(-90deg)  translateZ(44px); }
+        .f-top    { transform: rotateX(90deg)   translateZ(44px); }
+        .f-bottom { transform: rotateX(-90deg)  translateZ(44px); }
+        .pip {
+            position: absolute; width: 13px; height: 13px;
+            border-radius: 50%; background: #2b2b2b;
+            box-shadow: inset 0 -2px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        button {
+            font-size: 17px; padding: 11px 24px; margin: 6px;
+            border: none; border-radius: 30px; color: #fff;
+            cursor: pointer; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        button:hover { transform: translateY(-2px); }
+        .btn-dice { background: #ff8c00; }
+        .btn-chest { background: #ff6b6b; }
+        .btn-full { background: #37b24d; }
+        .result { font-size: 17px; color: #4a90d9; min-height: 44px; margin-top: 8px; }
+
+        /* ===== 打怪区 ===== */
+        .battle { margin-top: 18px; padding-top: 16px; border-top: 2px dashed #ffd43b; }
+        .party { display: flex; justify-content: center; gap: 30px; margin-bottom: 10px; }
+        .fighter { background: #f3f9ff; border: 2px solid #4dd0e1; border-radius: 12px; padding: 8px 16px; font-size: 15px; color: #555; }
+        .fighter .hp { color: #37b24d; font-weight: bold; }
+        .monster { font-size: 60px; min-height: 66px; }
+        .monster-name { font-size: 17px; color: #e64980; font-weight: bold; }
+
+        /* ===== 立体 3D 怪物 ===== */
+        .monster3d {
+            width: 112px;
+            height: 112px;
+            perspective: 420px;
+            margin: 14px auto 6px;
+        }
+        .mcube {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            animation: monsterSpin 6s linear infinite;
+        }
+        .mface {
+            position: absolute;
+            width: 112px;
+            height: 112px;
+            border-radius: 14px;
+            border: 2px solid rgba(0, 0, 0, 0.25);
+            background: #69db7c;
+        }
+        .mf-front  { transform: rotateY(0deg)    translateZ(56px); }
+        .mf-back   { transform: rotateY(180deg)  translateZ(56px); }
+        .mf-right  { transform: rotateY(90deg)   translateZ(56px); }
+        .mf-left   { transform: rotateY(-90deg)  translateZ(56px); }
+        .mf-top    { transform: rotateX(90deg)   translateZ(56px); }
+        .mf-bottom { transform: rotateX(-90deg)  translateZ(56px); }
+        @keyframes monsterSpin {
+            from { transform: rotateX(-14deg) rotateY(0deg); }
+            to   { transform: rotateX(-14deg) rotateY(360deg); }
+        }
+        .meye {
+            position: absolute;
+            width: 24px;
+            height: 28px;
+            background: #fff;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 0, 0, 0.15);
+        }
+        .meye::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 11px;
+            height: 11px;
+            background: #111;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .mmouth {
+            position: absolute;
+            left: 50%;
+            bottom: 18px;
+            transform: translateX(-50%);
+            width: 42px;
+            height: 15px;
+            border: 4px solid #111;
+            border-top: none;
+            border-radius: 0 0 24px 24px;
+        }
+        .hpbar { width: 70%; height: 14px; background: #eee; border-radius: 10px; margin: 8px auto; overflow: hidden; }
+        .hpfill { height: 100%; width: 100%; background: linear-gradient(to right, #ff6b6b, #e64980); transition: width 0.3s; }
+        .hp-text { font-size: 14px; color: #888; }
+        .btn-attack { background: #e64980; }
+        .btn-revive { background: #37b24d; display: none; }
+        .btn-fixai { background: #845ef7; display: none; }
+
+        .status { margin-top: 16px; padding-top: 14px; border-top: 2px dashed #ffd43b; font-size: 16px; color: #555; }
+        .his { margin-top: 8px; font-size: 15px; color: #ff8c00; font-weight: bold; }
+        .back {
+            display: inline-block; margin: 25px auto 60px; padding: 12px 30px;
+            font-size: 18px; color: #fff; background: #ff8c00;
+            border-radius: 30px; text-decoration: none; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .back:hover { transform: translateY(-2px); }
+
+        /* ===== 全屏飞行棋 ===== */
+        #diceFull {
+            display: none; position: fixed; inset: 0;
+            background: radial-gradient(circle at 50% 40%, #2f4468, #0c1420 80%);
+            z-index: 100; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+        }
+        #diceFull .fs-box { color: #fff; }
+        #diceFull h2 { color: #ffd43b; font-size: 36px; margin: 0 0 8px; text-shadow: 0 0 16px rgba(255, 212, 59, 0.5); }
+        #diceFull canvas { border: 4px solid #d4a017; border-radius: 18px; background: #fffaf0; cursor: pointer; max-width: 92vw; max-height: 62vh; }
+        #diceFull .dice3d { transform: scale(1.3); margin: 12px auto; }
+        .fs-result { font-size: 22px; color: #8ae3ef; min-height: 32px; margin: 8px 0; }
+        .btn-exit { background: #e64980; font-size: 18px; padding: 12px 34px; }
+        .fs-tip { color: #9aa5b5; font-size: 14px; margin-top: 6px; }
+    </style>
+</head>
+<body>
+    <h1>🛫 飞行棋 · 冒险小游戏</h1>
+    <p class="welcome">标准飞行棋：4 个棋子、掷 6 起飞、撞飞对方、先全到家者胜！</p>
+
+    <div class="game-area">
+        <!-- ===== 飞行棋区 ===== -->
+        <div class="ludo-area">
+            <h2>🛫 飞行棋 · 和AI玩（标准规则）</h2>
+            <div class="ludo-flex">
+                <canvas id="ludoBoard" width="340" height="340"></canvas>
+                <div class="ludo-side">
+                    <div class="dice3d">
+                        <div class="cube" id="ludoCube" onclick="rollLudo()" title="点我掷骰子">
+                            <div class="face f-front"><div class="pip" style="left:37px;top:37px"></div></div>
+                            <div class="face f-bottom"><div class="pip" style="left:10px;top:10px"></div><div class="pip" style="left:65px;top:65px"></div></div>
+                            <div class="face f-right"><div class="pip" style="left:10px;top:10px"></div><div class="pip" style="left:37px;top:37px"></div><div class="pip" style="left:65px;top:65px"></div></div>
+                            <div class="face f-left"><div class="pip" style="left:10px;top:10px"></div><div class="pip" style="left:65px;top:10px"></div><div class="pip" style="left:10px;top:65px"></div><div class="pip" style="left:65px;top:65px"></div></div>
+                            <div class="face f-top"><div class="pip" style="left:10px;top:10px"></div><div class="pip" style="left:65px;top:10px"></div><div class="pip" style="left:10px;top:65px"></div><div class="pip" style="left:65px;top:65px"></div><div class="pip" style="left:37px;top:37px"></div></div>
+                            <div class="face f-back"><div class="pip" style="left:10px;top:10px"></div><div class="pip" style="left:10px;top:37px"></div><div class="pip" style="left:10px;top:65px"></div><div class="pip" style="left:65px;top:10px"></div><div class="pip" style="left:65px;top:37px"></div><div class="pip" style="left:65px;top:65px"></div></div>
+                        </div>
+                    </div>
+                    <button class="btn-dice" onclick="rollLudo()">🎲 掷骰子！</button>
+                    <button class="btn-full" onclick="enterFull()">⛶ 全屏飞行棋</button>
+                    <div class="result" id="ludoMsg">掷 6 起飞！该你掷骰子了 🎲</div>
+                    <button class="btn-reset" id="ludoReset" onclick="resetLudo()">🔄 重新开始</button>
+                    <div class="rules">
+                        📖 <b>标准规则</b><br>
+                        · 每方 4 个棋子，掷到 <b>1 或 6</b> 都能起飞<br>
+                        · 掷到 <b>6</b>：有停机坪棋子 → <b>起飞</b>（不走 6 步）；全飞出去了 → 才能走 6 步<br>
+                        · 只有掷到 <b>6</b> 能<b>再掷一次</b>（最多连掷 3 次）<br>
+                        · 踩到<b>自己颜色</b>的格子 → 跳 4 格<br>
+                        · 踩到对方棋子 → <b>撞飞</b>回停机坪<br>
+                        · 到终点需<b>刚好</b>，多了会弹回<br>
+                        · 4 个棋子全部到家 → <b>获胜</b>！
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="result" style="margin-top:14px">🎁 开宝箱试试手气：</div>
+        <button class="btn-chest" onclick="openChest()">🎁 开宝箱！</button>
+        <div class="result" id="chestMsg"></div>
+
+        <!-- ===== 和 AI 组队打怪 ===== -->
+        <div class="battle">
+            <h2 style="color:#e64980">🗡️ 和AI组队打怪</h2>
+            <div class="party">
+                <div class="fighter">🔵 你<br>❤️ <span class="hp"><span id="playerHPNum">30</span>/<span id="playerMaxHP">30</span></span></div>
+                <div class="fighter">🔴 AI伙伴<br>❤️ <span class="hp"><span id="aiHPNum">20</span>/<span id="aiMaxHP">20</span></span></div>
+            </div>
+            <div class="monster3d">
+                <div class="mcube" id="mcube">
+                    <div class="mface mf-front">
+                        <div class="meye" style="left:22px;top:36px"></div>
+                        <div class="meye" style="right:22px;top:36px"></div>
+                        <div class="mmouth"></div>
+                    </div>
+                    <div class="mface mf-back"></div>
+                    <div class="mface mf-right"></div>
+                    <div class="mface mf-left"></div>
+                    <div class="mface mf-top"></div>
+                    <div class="mface mf-bottom"></div>
+                </div>
+            </div>
+            <div class="monster-name" id="monsterName">👾 史莱姆</div>
+            <div class="hpbar"><div class="hpfill" id="monsterHPFill"></div></div>
+            <div class="hp-text">怪物血量：<span id="monsterHPNum">10</span>/<span id="monsterMaxHP">10</span></div>
+            <button class="btn-attack" id="attackBtn" onclick="attack()">🗡️ 和AI一起攻击！</button>
+            <button class="btn-revive" id="reviveBtn" onclick="revive()">💀 你倒下了，点这里复活</button>
+            <button class="btn-fixai" id="fixAiBtn" onclick="fixAI()">🔧 AI伙伴倒下了，花5币修好</button>
+            <div class="result" id="battleMsg">点击攻击，和 AI 伙伴一起打怪物！</div>
+        </div>
+
+        <div class="status">
+            💰 冒险币：<span id="coinsNum">0</span>
+            ｜ 🏅 等级：<span id="levelNum">1</span><br>
+            🎲 <span id="diceCountNum">0</span>次 ｜ 🎁 <span id="chestCountNum">0</span>次 ｜ 💀 <span id="killCountNum">0</span>只
+        </div>
+        <div class="his">🏆 历史最高纪录：<span id="hiscoreNum">0</span> 币</div>
+    </div>
+
+    <a class="back" href="index.html">🏠 返回游戏大厅</a>
+
+    <!-- ===== 全屏飞行棋面板 ===== -->
+    <div id="diceFull">
+        <div class="fs-box">
+            <h2>🛫 全屏飞行棋</h2>
+            <canvas id="ludoBoardFS" width="560" height="560"></canvas>
+            <div class="dice3d">
+                <div class="cube" id="ludoCubeFS" onclick="rollLudo()" title="点我掷骰子">
+                    <div class="face f-front"><div class="pip" style="left:37px;top:37px"></div></div>
+                    <div class="face f-bottom"><div class="pip" style="left:10px;top:10px"></div><div class="pip" style="left:65px;top:65px"></div></div>
+                    <div class="face f-right"><div class="pip" style="left:10px;top:10px"></div><div class="pip" style="left:37px;top:37px"></div><div class="pip" style="left:65px;top:65px"></div></div>
+                    <div class="face f-left"><div class="pip" style="left:10px;top:10px"></div><div class="pip" style="left:65px;top:10px"></div><div class="pip" style="left:10px;top:65px"></div><div class="pip" style="left:65px;top:65px"></div></div>
+                    <div class="face f-top"><div class="pip" style="left:10px;top:10px"></div><div class="pip" style="left:65px;top:10px"></div><div class="pip" style="left:10px;top:65px"></div><div class="pip" style="left:65px;top:65px"></div><div class="pip" style="left:37px;top:37px"></div></div>
+                    <div class="face f-back"><div class="pip" style="left:10px;top:10px"></div><div class="pip" style="left:10px;top:37px"></div><div class="pip" style="left:10px;top:65px"></div><div class="pip" style="left:65px;top:10px"></div><div class="pip" style="left:65px;top:37px"></div><div class="pip" style="left:65px;top:65px"></div></div>
+                </div>
+            </div>
+            <button class="btn-dice" onclick="rollLudo()">🎲 掷骰子！</button>
+            <div class="fs-result" id="fsLudoMsg">掷 6 起飞！该你掷骰子了 🎲</div>
+            <button class="btn-exit" onclick="exitFull()">✖ 退出全屏</button>
+            <div class="fs-tip">多个棋子可走时，点击棋盘上的棋子选择；按 Esc 退出全屏</div>
+        </div>
+    </div>
+
+    <script>
+        // ===== 通用游戏数据 =====
+        var coins = 0, totalEarned = 0, level = 1;
+        var playerHP = 30, maxHP = 30;
+        var aiHP = 20, aiMaxHP = 20;
+        var monsterHP = 10, monsterMax = 10;
+        var monsterEmoji = "👾", monsterName = "史莱姆";
+        var diceCount = 0, chestCount = 0, killCount = 0;
+        var hiscore = Number(localStorage.getItem("adventure_hiscore") || 0);
+
+        var monsters = {
+            "👾": "史莱姆", "🐉": "小火龙", "👻": "幽灵",
+            "🦇": "蝙蝠", "🐺": "野狼", "🐍": "毒蛇"
+        };
+        // 每种怪物的立体颜色
+        var MONSTER_COLORS = {
+            "👾": "#69db7c", "🐉": "#ff6b6b", "👻": "#b197fc",
+            "🦇": "#9775fa", "🐺": "#adb5bd", "🐍": "#63e6be"
+        };
+        function roll() { return Math.floor(Math.random() * 6) + 1; }
+
+        // ================= 标准飞行棋 =================
+        var RUN = 40;                  // 跑道 40 格
+        var RED_START = 22;            // 红方起点（屏幕格）
+        var BLUE_GOAL_END = 43;        // 蓝方终点（完成）
+        var RED_GOAL_END = 47;         // 红方终点（完成）
+        var blueP = [-1, -1, -1, -1];  // -1=停机坪；0-39=跑道；40-43=蓝终点
+        var redP = [-1, -1, -1, -1];   // -1=停机坪；0-39=跑道；44-47=红终点
+        var turn = "player", winner = null, moving = false, sixStreak = 0;
+        var awaitingPick = false, pendingSteps = 0;
+
+        function ludoMsg(m) {
+            document.getElementById("ludoMsg").textContent = m;
+            document.getElementById("fsLudoMsg").textContent = m;
+        }
+
+        // 跑道格中心
+        function trackPos(i, cx, cy, R) {
+            var ang = -Math.PI / 2 + i * 2 * Math.PI / RUN;
+            return { x: cx + Math.cos(ang) * R, y: cy + Math.sin(ang) * R };
+        }
+
+        // ===== 棋盘渲染 =====
+        function drawBoard(cvs) {
+            var c = cvs.getContext("2d");
+            var size = cvs.width, cx = size / 2, cy = size / 2, R = size * 0.4;
+            c.clearRect(0, 0, size, size);
+            // 圆盘
+            c.fillStyle = "#fffaf0";
+            c.beginPath(); c.arc(cx, cy, R * 1.24, 0, Math.PI * 2); c.fill();
+            c.strokeStyle = "#d4a017"; c.lineWidth = size * 0.009;
+            c.beginPath(); c.arc(cx, cy, R * 1.24, 0, Math.PI * 2); c.stroke();
+            // 跑道 40 格（4 色循环）
+            var colors = ["#a5d8ff", "#ffe066", "#ffc9c9", "#b2f2bb"];  // 蓝黄红绿
+            for (var i = 0; i < RUN; i++) {
+                var p = trackPos(i, cx, cy, R);
+                c.fillStyle = colors[i % 4];
+                c.beginPath(); c.arc(p.x, p.y, size * 0.034, 0, Math.PI * 2); c.fill();
+                c.strokeStyle = "#b8963e"; c.lineWidth = 1.5; c.stroke();
+            }
+            // 起点标记
+            var sp = trackPos(0, cx, cy, R), rp = trackPos(RED_START, cx, cy, R);
+            c.font = (size * 0.022) + "px serif"; c.textAlign = "center"; c.textBaseline = "middle";
+            c.fillStyle = "#1971c2"; c.fillText("蓝", sp.x, sp.y);
+            c.fillStyle = "#e03131"; c.fillText("红", rp.x, rp.y);
+            // 终点通道（蓝：圆盘上内侧横排 4 格；红：下内侧横排 4 格）
+            var goalY = cy - size * 0.14, goalY2 = cy + size * 0.14;
+            for (var g = 0; g < 4; g++) {
+                var gx = cx + (g - 1.5) * size * 0.052;
+                c.fillStyle = "#74c0fc"; c.fillRect(gx - size * 0.022, goalY - size * 0.022, size * 0.044, size * 0.044);
+                c.strokeStyle = "#1971c2"; c.strokeRect(gx - size * 0.022, goalY - size * 0.022, size * 0.044, size * 0.044);
+                c.fillStyle = "#ff8787"; c.fillRect(gx - size * 0.022, goalY2 - size * 0.022, size * 0.044, size * 0.044);
+                c.strokeStyle = "#e03131"; c.strokeRect(gx - size * 0.022, goalY2 - size * 0.022, size * 0.044, size * 0.044);
+            }
+            c.fillStyle = "#1971c2"; c.font = (size * 0.02) + "px serif";
+            c.fillText("🏁 终点", cx, goalY - size * 0.05);
+            c.fillStyle = "#e03131";
+            c.fillText("🏁 终点", cx, goalY2 + size * 0.055);
+            // 停机坪（蓝左、红右，各 4 个点）
+            for (var h = 0; h < 4; h++) {
+                var hy = cy + (h - 1.5) * size * 0.075;
+                c.fillStyle = "#a5d8ff"; c.beginPath(); c.arc(cx - size * 0.24, hy, size * 0.028, 0, Math.PI * 2); c.fill();
+                c.strokeStyle = "#1971c2"; c.stroke();
+                c.fillStyle = "#ffc9c9"; c.beginPath(); c.arc(cx + size * 0.24, hy, size * 0.028, 0, Math.PI * 2); c.fill();
+                c.strokeStyle = "#e03131"; c.stroke();
+            }
+            c.fillStyle = "#1971c2"; c.fillText("🔵 停机坪", cx - size * 0.24, cy - size * 0.2);
+            c.fillStyle = "#e03131"; c.fillText("🔴 停机坪", cx + size * 0.24, cy - size * 0.2);
+            // 棋子
+            for (var b = 0; b < 4; b++) drawPiece(c, "blue", b, cx, cy, R, size);
+            for (var r2 = 0; r2 < 4; r2++) drawPiece(c, "red", r2, cx, cy, R, size);
+        }
+
+        function piecePos(who, idx, cx, cy, R) {
+            var p = who === "blue" ? blueP[idx] : redP[idx];
+            if (p === -1) {  // 停机坪
+                var hy = cy + (idx - 1.5) * R * 0.19;
+                return who === "blue" ? { x: cx - R * 0.6, y: hy } : { x: cx + R * 0.6, y: hy };
+            }
+            if (who === "blue") {
+                if (p >= 40) return { x: cx + ((p - 40) - 1.5) * R * 0.13, y: cy - R * 0.35 };
+                return trackPos(p, cx, cy, R);
+            } else {
+                if (p >= 44) return { x: cx + ((p - 44) - 1.5) * R * 0.13, y: cy + R * 0.35 };
+                var s = (p + RED_START) % RUN;
+                return trackPos(s, cx, cy, R);
+            }
+        }
+
+        // ===== 立体飞机棋子（俯视，机头朝上） =====
+        function drawPlane(c, x, y, r, main, dark, label) {
+            c.save();
+            // 底部投影（立体感）
+            c.fillStyle = "rgba(0,0,0,0.2)";
+            c.beginPath(); c.ellipse(x + r * 0.15, y + r * 0.25, r * 1.7, r * 1.95, 0, 0, Math.PI * 2); c.fill();
+            // 尾翼（左右，机尾朝下）
+            c.fillStyle = dark;
+            c.beginPath();
+            c.moveTo(x, y + r * 1.05);
+            c.lineTo(x - r * 0.65, y + r * 1.15);
+            c.lineTo(x - r * 0.6, y + r * 1.5);
+            c.lineTo(x, y + r * 1.25);
+            c.closePath(); c.fill();
+            c.beginPath();
+            c.moveTo(x, y + r * 1.05);
+            c.lineTo(x + r * 0.65, y + r * 1.15);
+            c.lineTo(x + r * 0.6, y + r * 1.5);
+            c.lineTo(x, y + r * 1.25);
+            c.closePath(); c.fill();
+            // 垂直尾翼（中缝）
+            c.fillStyle = main;
+            c.beginPath();
+            c.moveTo(x, y + r * 1.05);
+            c.lineTo(x - r * 0.18, y + r * 1.52);
+            c.lineTo(x + r * 0.18, y + r * 1.52);
+            c.closePath(); c.fill();
+            // 机翼（左右，带渐变）
+            var g = c.createLinearGradient(x - r, y, x + r, y);
+            g.addColorStop(0, main);
+            g.addColorStop(1, dark);
+            c.fillStyle = g;
+            c.beginPath();
+            c.moveTo(x - r * 0.4, y + r * 0.15);
+            c.lineTo(x - r * 1.35, y + r * 0.55);
+            c.lineTo(x - r * 1.1, y + r * 1.1);
+            c.lineTo(x - r * 0.35, y + r * 0.75);
+            c.closePath(); c.fill();
+            c.strokeStyle = dark; c.lineWidth = 1; c.stroke();
+            c.beginPath();
+            c.moveTo(x + r * 0.4, y + r * 0.15);
+            c.lineTo(x + r * 1.35, y + r * 0.55);
+            c.lineTo(x + r * 1.1, y + r * 1.1);
+            c.lineTo(x + r * 0.35, y + r * 0.75);
+            c.closePath(); c.fill();
+            c.stroke();
+            // 机身（长椭圆，左亮右暗渐变 = 立体感）
+            var g2 = c.createLinearGradient(x - r * 0.55, y, x + r * 0.55, y);
+            g2.addColorStop(0, "#ffffff");
+            g2.addColorStop(0.35, main);
+            g2.addColorStop(1, dark);
+            c.fillStyle = g2;
+            c.beginPath(); c.ellipse(x, y, r * 0.55, r * 1.7, 0, 0, Math.PI * 2); c.fill();
+            c.strokeStyle = dark; c.lineWidth = 1.2; c.stroke();
+            // 机头高光
+            var g3 = c.createRadialGradient(x - r * 0.1, y - r * 1.4, r * 0.1, x, y - r * 0.9, r * 0.8);
+            g3.addColorStop(0, "rgba(255,255,255,0.6)");
+            g3.addColorStop(1, "rgba(255,255,255,0)");
+            c.fillStyle = g3;
+            c.beginPath(); c.ellipse(x, y - r * 0.8, r * 0.5, r * 0.9, 0, 0, Math.PI * 2); c.fill();
+            // 螺旋桨（机头）
+            c.fillStyle = dark;
+            c.beginPath(); c.arc(x, y - r * 1.55, r * 0.18, 0, Math.PI * 2); c.fill();
+            c.fillStyle = "#fff";
+            c.beginPath(); c.arc(x, y - r * 1.55, r * 0.07, 0, Math.PI * 2); c.fill();
+            // 编号（白字深描边）
+            c.fillStyle = "#fff";
+            c.strokeStyle = dark; c.lineWidth = 2;
+            c.font = "bold " + Math.round(r * 0.85) + "px serif";
+            c.textAlign = "center"; c.textBaseline = "middle";
+            c.strokeText(label, x, y + r * 0.1);
+            c.fillText(label, x, y + r * 0.1);
+            c.restore();
+        }
+
+        function drawPiece(c, who, idx, cx, cy, R, size) {
+            var p = who === "blue" ? blueP[idx] : redP[idx];
+            if (p >= (who === "blue" ? BLUE_GOAL_END : RED_GOAL_END)) return;  // 到家的不画，用计数
+            var pos = piecePos(who, idx, cx, cy, R);
+            // 同格错位
+            var off = (idx - 1.5) * size * 0.018;
+            var ox = who === "blue" ? pos.x + off : pos.x - off;
+            var oy = pos.y;
+            var r = size * 0.03;
+            var main = who === "blue" ? "#4dabf7" : "#ff6b6b";
+            var dark = who === "blue" ? "#1971c2" : "#e03131";
+            drawPlane(c, ox, oy, r, main, dark, String(idx + 1));
+            // 可选高亮（金色光圈 + 提示）
+            if (awaitingPick && who === "blue" && p >= 0 && p < BLUE_GOAL_END) {
+                c.strokeStyle = "#ffd43b"; c.lineWidth = 4;
+                c.beginPath(); c.arc(ox, oy, r * 1.8, 0, Math.PI * 2); c.stroke();
+                c.font = (size * 0.024) + "px serif";
+                c.fillStyle = "#ffd43b";
+                c.textAlign = "center"; c.textBaseline = "middle";
+                c.fillText("可点", ox, oy - r * 1.9);
+            }
+        }
+
+        function redrawBoards() {
+            drawBoard(document.getElementById("ludoBoard"));
+            drawBoard(document.getElementById("ludoBoardFS"));
+        }
+
+        // ===== 判定辅助 =====
+        function hasHome(who) {
+            var arr = who === "blue" ? blueP : redP;
+            for (var i = 0; i < 4; i++) if (arr[i] === -1) return true;
+            return false;
+        }
+        function firstHome(who) {
+            var arr = who === "blue" ? blueP : redP;
+            for (var i = 0; i < 4; i++) if (arr[i] === -1) return i;
+            return -1;
+        }
+        function movable(who) {
+            var arr = who === "blue" ? blueP : redP;
+            var goalEnd = who === "blue" ? BLUE_GOAL_END : RED_GOAL_END;
+            var list = [];
+            for (var i = 0; i < 4; i++)
+                if (arr[i] >= 0 && arr[i] < goalEnd) list.push(i);
+            return list;
+        }
+
+        // 跳格：踩到自己颜色格跳 4
+        function jumpBlue(pos) {
+            return (pos % 4 === 0 && pos < 36) ? pos + 4 : pos;
+        }
+        function jumpRed(pos) {
+            return (pos % 4 === 0 && (pos + RED_START) % RUN < 38) ? pos + 4 : pos;
+        }
+
+        // 撞子：落点有对方棋子 → 撞回停机坪
+        function collideBlue(land) {  // 蓝子落在跑道 land 格
+            for (var i = 0; i < 4; i++) {
+                if (redP[i] >= 0 && redP[i] < 40 && (redP[i] + RED_START) % RUN === land) {
+                    redP[i] = -1;
+                    ludoMsg("💥 撞飞一个红子回停机坪！");
+                }
+            }
+        }
+        function collideRed(land) {   // 红子落在跑道屏幕格 land
+            var screen = (land + RED_START) % RUN;
+            for (var i = 0; i < 4; i++) {
+                if (blueP[i] >= 0 && blueP[i] < 40 && blueP[i] === screen) {
+                    blueP[i] = -1;
+                    ludoMsg("💥 你的棋子被 AI 撞回停机坪了！");
+                }
+            }
+        }
+
+        // ===== 玩家掷骰 =====
+        function rollLudo() {
+            if (moving || winner) return;
+            if (turn !== "player") { ludoMsg("🔴 现在是 AI 的回合，等一下～"); return; }
+            moving = true;
+            var n = roll();
+            setDice(document.getElementById("ludoCube"), n);
+            setDice(document.getElementById("ludoCubeFS"), n);
+            diceCount++;
+            updateUI();
+            ludoMsg("你掷出了 " + n + " 点！");
+            setTimeout(function () { playerRoll(n); }, 1000);
+        }
+
+        function playerRoll(n) {
+            // 掷到 1 或 6 且有停机坪棋子 → 起飞
+            if ((n === 1 || n === 6) && hasHome("blue")) {
+                var idx = firstHome("blue");
+                blueP[idx] = 0;
+                redrawBoards();
+                ludoMsg("🛫 掷到 " + n + "！棋子 " + (idx + 1) + " 起飞了！（只起飞，不走 " + n + " 步）");
+                afterLand("player", n);
+                return;
+            }
+            var list = movable("blue");
+            if (list.length === 0) {
+                ludoMsg("😅 没有棋子能走，过！轮到 AI");
+                moving = false;
+                toAI();
+                return;
+            }
+            if (list.length === 1) {
+                moveBlue(list[0], n);
+                return;
+            }
+            // 多个可动 → 玩家点击或按数字键选择
+            awaitingPick = true;
+            pendingSteps = n;
+            ludoMsg("👆 点击金色棋子 或 按 1-" + list.length + " 选择要走的棋子");
+        }
+
+        function moveBlue(idx, n) {
+            awaitingPick = false;
+            var pos = blueP[idx];
+            var np = pos + n;
+            if (np > BLUE_GOAL_END) np = 2 * BLUE_GOAL_END - np;  // 超过终点弹回
+            blueP[idx] = np;
+            redrawBoards();
+            if (np === BLUE_GOAL_END) {
+                ludoMsg("🏁 棋子 " + (idx + 1) + " 到家了！（" + finishedCount("blue") + "/4）");
+                afterLand("player", n);
+                return;
+            }
+            if (np < 40) {
+                var j = jumpBlue(np);
+                if (j !== np) { blueP[idx] = j; np = j; ludoMsg("✨ 踩到蓝色格，跳 4 格！"); redrawBoards(); }
+                collideBlue(np);
+            }
+            afterLand("player", n);
+        }
+
+        // ===== AI 回合 =====
+        function aiRoll() {
+            var n = roll();
+            setDice(document.getElementById("ludoCube"), n);
+            setDice(document.getElementById("ludoCubeFS"), n);
+            ludoMsg("🔴 AI 掷出了 " + n + " 点！");
+            setTimeout(function () { aiChoose(n); }, 1000);
+        }
+
+        function aiChoose(n) {
+            // 掷到 1 或 6 且有停机坪棋子 → 起飞
+            if ((n === 1 || n === 6) && hasHome("red")) {
+                var idx = firstHome("red");
+                redP[idx] = 0;
+                redrawBoards();
+                ludoMsg("🛫 AI 掷到 " + n + "，红子 " + (idx + 1) + " 起飞！（只起飞，不走 " + n + " 步）");
+                afterLand("ai", n);
+                return;
+            }
+            var list = movable("red");
+            if (list.length === 0) {
+                ludoMsg("🔴 AI 没有棋子能走，过！该你了");
+                moving = false;
+                toPlayer();
+                return;
+            }
+            // 选最优：能到终点 > 能撞 > 能跳 > 位置靠前
+            var best = list[0], bestScore = -1;
+            for (var k = 0; k < list.length; k++) {
+                var i = list[k];
+                var np = redP[i] + n;
+                if (np > RED_GOAL_END) np = 2 * RED_GOAL_END - np;
+                var score = 0;
+                if (np === RED_GOAL_END) score = 100;
+                if (np < 40) {
+                    var screen = (np + RED_START) % RUN;
+                    for (var b = 0; b < 4; b++)
+                        if (blueP[b] >= 0 && blueP[b] < 40 && blueP[b] === screen) score += 50;  // 能撞
+                    if (jumpRed(np) !== np) score += 20;  // 能跳
+                }
+                score += redP[i];
+                if (score > bestScore) { bestScore = score; best = i; }
+            }
+            moveRed(best, n);
+        }
+
+        function moveRed(idx, n) {
+            var pos = redP[idx];
+            var np = pos + n;
+            if (np > RED_GOAL_END) np = 2 * RED_GOAL_END - np;
+            redP[idx] = np;
+            redrawBoards();
+            if (np === RED_GOAL_END) {
+                ludoMsg("🏁 AI 的红子 " + (idx + 1) + " 到家了！（" + finishedCount("red") + "/4）");
+                afterLand("ai", n);
+                return;
+            }
+            if (np < 40) {
+                var j = jumpRed(np);
+                if (j !== np) { redP[idx] = j; np = j; ludoMsg("✨ AI 踩到红色格，跳 4 格！"); redrawBoards(); }
+                collideRed(np);
+            }
+            afterLand("ai", n);
+        }
+
+        // ===== 落子后：连掷 or 换手 =====
+        function afterLand(who, n) {
+            // 检查胜负
+            var fc = finishedCount(who);
+            if (fc >= 4) {
+                winner = who;
+                moving = false;
+                if (who === "player") {
+                    ludoMsg("🎉🎉 你赢了飞行棋！4 个棋子全部到家！获得 20 冒险币！");
+                    gainCoins(20);
+                } else {
+                    ludoMsg("😅 AI 赢了飞行棋……给你 2 个币安慰一下");
+                    gainCoins(2);
+                }
+                updateUI();
+                document.getElementById("ludoReset").style.display = "inline-block";
+                return;
+            }
+            // 只有掷到 6 才能再掷一次（最多连掷 3 次）
+            if (n === 6 && sixStreak < 3) {
+                sixStreak++;
+                moving = false;
+                if (who === "player") { turn = "player"; ludoMsg("🎉 掷到 6！可以再掷一次！"); }
+                else { ludoMsg("🔴 AI 掷到 6！AI 再掷一次…"); setTimeout(aiRoll, 900); }
+                return;
+            }
+            sixStreak = 0;
+            if (who === "player") toAI();
+            else toPlayer();
+        }
+
+        function finishedCount(who) {
+            var arr = who === "blue" ? blueP : redP;
+            var end = who === "blue" ? BLUE_GOAL_END : RED_GOAL_END;
+            var c = 0;
+            for (var i = 0; i < 4; i++) if (arr[i] === end) c++;
+            return c;
+        }
+
+        function toAI() { moving = false; turn = "ai"; ludoMsg("🔴 AI 掷骰子中…"); setTimeout(aiRoll, 900); }
+        function toPlayer() { moving = false; turn = "player"; ludoMsg("该你掷骰子了！点骰子 🎲"); }
+
+        // ===== 点击棋盘选棋子 =====
+        function setupPick(cvs) {
+            cvs.addEventListener("click", function (e) {
+                if (!awaitingPick || turn !== "player") return;
+                var rect = cvs.getBoundingClientRect();
+                var mx = (e.clientX - rect.left) * (cvs.width / rect.width);
+                var my = (e.clientY - rect.top) * (cvs.height / rect.height);
+                var size = cvs.width, cx = size / 2, cy = size / 2, R = size * 0.4;
+                for (var i = 0; i < 4; i++) {
+                    if (blueP[i] < 0 || blueP[i] >= BLUE_GOAL_END) continue;
+                    var pos = piecePos("blue", i, cx, cy, R);
+                    var dx = mx - pos.x, dy = my - pos.y;
+                    if (dx * dx + dy * dy < (size * 0.05) * (size * 0.05)) {
+                        moveBlue(i, pendingSteps);
+                        return;
+                    }
+                }
+            });
+        }
+        setupPick(document.getElementById("ludoBoard"));
+        setupPick(document.getElementById("ludoBoardFS"));
+
+        // 数字键直接选棋子（掷骰后可走多个时）
+        document.addEventListener("keydown", function (e) {
+            if (!(awaitingPick && turn === "player")) return;
+            var n = parseInt(e.key, 10);
+            if (n >= 1 && n <= 4 && blueP[n - 1] >= 0 && blueP[n - 1] < BLUE_GOAL_END) {
+                moveBlue(n - 1, pendingSteps);
+            }
+        });
+
+        function resetLudo() {
+            blueP = [-1, -1, -1, -1];
+            redP = [-1, -1, -1, -1];
+            turn = "player"; winner = null; moving = false; sixStreak = 0;
+            awaitingPick = false; pendingSteps = 0;
+            document.getElementById("ludoReset").style.display = "none";
+            ludoMsg("新的飞行棋！掷 6 起飞 🎲");
+            redrawBoards();
+        }
+
+        // ===== 3D 骰子 =====
+        function setDice(cube, n) {
+            var targets = {
+                1: "rotateX(0deg) rotateY(0deg)",
+                6: "rotateX(0deg) rotateY(180deg)",
+                3: "rotateX(0deg) rotateY(-90deg)",
+                4: "rotateX(0deg) rotateY(90deg)",
+                2: "rotateX(90deg) rotateY(0deg)",
+                5: "rotateX(-90deg) rotateY(0deg)"
+            };
+            var turns = 2 + Math.floor(Math.random() * 3);
+            var extraX = turns * 360, extraY = turns * 360;
+            cube.style.transform = "rotateX(" + extraX + "deg) rotateY(" + extraY + "deg) " + targets[n];
+        }
+
+        // ===== 开宝箱 =====
+        function openChest() {
+            var prizes = [
+                ["💎 捡到 5 个冒险币！", 5],
+                ["🗡️ 获得青铜剑一把！", 0],
+                ["⭐ 获得幸运星，好兆头！", 0],
+                ["🍬 捡到一颗糖，甜滋滋~", 0],
+                ["💩 唉，是个空箱子……", 0]
+            ];
+            var i = Math.floor(Math.random() * prizes.length);
+            document.getElementById("chestMsg").textContent = prizes[i][0];
+            chestCount++;
+            if (prizes[i][1] > 0) gainCoins(prizes[i][1]);
+            updateUI();
+        }
+
+        // ===== 和 AI 组队打怪 =====
+        function attack() {
+            if (playerHP <= 0) return;
+            var dmg = 2 + Math.floor(Math.random() * 4);
+            monsterHP = monsterHP - dmg;
+            var msg = "你对" + monsterName + "造成 " + dmg + " 点伤害！";
+            if (aiHP > 0) {
+                var aiDmg = 1 + Math.floor(Math.random() * 3);
+                monsterHP = monsterHP - aiDmg;
+                msg = msg + " 🔴 AI伙伴造成 " + aiDmg + " 点伤害！";
+            }
+            document.getElementById("battleMsg").textContent = msg;
+            if (monsterHP <= 0) {
+                var reward = 8 + Math.floor(Math.random() * 8);
+                document.getElementById("battleMsg").textContent = "🎉 你和AI一起打败了" + monsterName + "！获得 " + reward + " 个冒险币！";
+                killCount++;
+                gainCoins(reward);
+                newMonster();
+            } else {
+                var mDmg = 1 + Math.floor(Math.random() * 3);
+                if (Math.random() < 0.5) {
+                    playerHP = playerHP - mDmg;
+                    if (playerHP <= 0) {
+                        playerHP = 0;
+                        document.getElementById("battleMsg").textContent = "💀 你被" + monsterName + "击败了……";
+                        document.getElementById("attackBtn").style.display = "none";
+                        document.getElementById("reviveBtn").style.display = "inline-block";
+                    }
+                } else {
+                    if (aiHP > 0) {
+                        aiHP = aiHP - mDmg;
+                        if (aiHP <= 0) {
+                            aiHP = 0;
+                            document.getElementById("battleMsg").textContent = "⚡ AI伙伴被" + monsterName + "打倒了！花5个币能修好它";
+                            document.getElementById("fixAiBtn").style.display = "inline-block";
+                        }
+                    } else {
+                        playerHP = playerHP - mDmg;
+                        if (playerHP <= 0) {
+                            playerHP = 0;
+                            document.getElementById("battleMsg").textContent = "💀 你被" + monsterName + "击败了……";
+                            document.getElementById("attackBtn").style.display = "none";
+                            document.getElementById("reviveBtn").style.display = "inline-block";
+                        }
+                    }
+                }
+            }
+            updateUI();
+        }
+
+        function revive() {
+            if (coins >= 10) { coins = coins - 10; document.getElementById("battleMsg").textContent = "✨ 你花 10 个冒险币复活了！"; }
+            else { coins = 0; document.getElementById("battleMsg").textContent = "😅 冒险币不够，白嫖复活一次！"; }
+            playerHP = maxHP;
+            document.getElementById("attackBtn").style.display = "inline-block";
+            document.getElementById("reviveBtn").style.display = "none";
+            updateUI();
+        }
+
+        function fixAI() {
+            if (coins >= 5) { coins = coins - 5; document.getElementById("battleMsg").textContent = "🔧 花 5 个币修好了 AI 伙伴！"; }
+            else { coins = 0; document.getElementById("battleMsg").textContent = "😅 币不够，AI伙伴白嫖修好了！"; }
+            aiHP = aiMaxHP;
+            document.getElementById("fixAiBtn").style.display = "none";
+            updateUI();
+        }
+
+        function newMonster() {
+            var keys = Object.keys(monsters);
+            monsterEmoji = keys[Math.floor(Math.random() * keys.length)];
+            monsterName = monsters[monsterEmoji];
+            monsterMax = 8 + Math.floor(Math.random() * 8);
+            monsterHP = monsterMax;
+            document.getElementById("monsterName").textContent = monsterEmoji + " " + monsterName;
+            // 更新立体怪物的颜色
+            var col = MONSTER_COLORS[monsterEmoji] || "#69db7c";
+            var faces = document.querySelectorAll(".mface");
+            for (var f = 0; f < faces.length; f++) faces[f].style.background = col;
+        }
+
+        // ===== 金币 / 等级 / 排行榜 =====
+        function gainCoins(n) {
+            coins = coins + n;
+            totalEarned = totalEarned + n;
+            while (totalEarned >= level * 25) {
+                level++;
+                document.getElementById("battleMsg").textContent = "🎉🎉 恭喜升级！你现在是冒险家 Lv." + level + "！";
+            }
+            if (totalEarned > hiscore) {
+                hiscore = totalEarned;
+                localStorage.setItem("adventure_hiscore", hiscore);
+            }
+        }
+
+        function updateUI() {
+            document.getElementById("coinsNum").textContent = coins;
+            document.getElementById("levelNum").textContent = level;
+            document.getElementById("playerHPNum").textContent = playerHP;
+            document.getElementById("playerMaxHP").textContent = maxHP;
+            document.getElementById("aiHPNum").textContent = aiHP;
+            document.getElementById("aiMaxHP").textContent = aiMaxHP;
+            document.getElementById("monsterHPNum").textContent = monsterHP;
+            document.getElementById("monsterMaxHP").textContent = monsterMax;
+            document.getElementById("monsterHPFill").style.width = (monsterHP / monsterMax * 100) + "%";
+            document.getElementById("diceCountNum").textContent = diceCount;
+            document.getElementById("chestCountNum").textContent = chestCount;
+            document.getElementById("killCountNum").textContent = killCount;
+            document.getElementById("hiscoreNum").textContent = hiscore;
+        }
+
+        // ===== 全屏 =====
+        function enterFull() {
+            document.getElementById("diceFull").style.display = "flex";
+            try { document.documentElement.requestFullscreen(); } catch (err) {}
+        }
+        function exitFull() {
+            document.getElementById("diceFull").style.display = "none";
+            if (document.fullscreenElement) document.exitFullscreen();
+        }
+
+        // ===== 开场 =====
+        newMonster();
+        document.getElementById("hiscoreNum").textContent = hiscore;
+        redrawBoards();
+        ludoMsg("掷 6 起飞！该你掷骰子了 🎲");
+    </script>
+</body>
+</html>

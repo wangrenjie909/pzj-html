@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>🧙 冒险岛 · NPC 图鉴</title>
+    <style>
+        body {
+            background: linear-gradient(to bottom, #aee6ff, #e8f7ff);
+            color: #333;
+            font-family: "Microsoft YaHei", sans-serif;
+            text-align: center;
+            margin: 0;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #ff8c00;
+            font-size: 46px;
+            margin-top: 40px;
+            text-shadow: 2px 2px 0 #fff;
+        }
+        .back {
+            display: inline-block;
+            margin-top: 10px;
+            color: #4a90d9;
+            text-decoration: none;
+            font-size: 17px;
+            background: #fff;
+            border: 3px solid #ffd43b;
+            padding: 8px 20px;
+            border-radius: 30px;
+            transition: transform 0.2s;
+        }
+        .back:hover { transform: translateY(-3px); }
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 22px;
+            padding: 30px 20px 50px;
+        }
+        .npc {
+            background: #fff;
+            width: 230px;
+            padding: 24px 18px;
+            border-radius: 22px;
+            border: 4px solid #ffd43b;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .npc:hover {
+            transform: translateY(-6px) scale(1.03);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+        }
+        .npc .face { font-size: 58px; display: block; margin-bottom: 8px; }
+        .npc h2 { margin: 4px 0; color: #ff8c00; font-size: 22px; }
+        .npc .job {
+            display: inline-block;
+            background: #ffe8cc; color: #e8590c;
+            font-size: 13px; padding: 3px 12px;
+            border-radius: 20px; margin-bottom: 8px;
+        }
+        .npc p { font-size: 14px; color: #777; line-height: 1.6; margin: 6px 0 0; }
+        /* 对话框 */
+        #dlg {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 20;
+            align-items: center; justify-content: center;
+        }
+        .box {
+            background: #fff;
+            width: 430px; max-width: 90%;
+            border-radius: 24px;
+            padding: 24px;
+            text-align: left;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .box .head { font-size: 34px; }
+        .box h3 { margin: 4px 0 12px; color: #ff8c00; }
+        .bubble {
+            background: #eef7ff;
+            border-radius: 16px;
+            padding: 16px 18px;
+            font-size: 17px;
+            line-height: 1.7;
+            color: #444;
+            min-height: 90px;
+            border-left: 6px solid #4a90d9;
+        }
+        .btns { margin-top: 16px; text-align: center; }
+        .btns button {
+            font-size: 16px; padding: 9px 22px;
+            border-radius: 30px; border: none; cursor: pointer;
+            margin: 0 6px;
+        }
+        .next { background: #ff8c00; color: #fff; }
+        .close { background: #eee; color: #555; }
+        .sign { color: #888; padding-bottom: 40px; }
+    </style>
+</head>
+<body>
+    <h1>🧙 冒险岛 · NPC 图鉴</h1>
+    <a class="back" href="index.html">🏠 返回大厅</a>
+
+    <div class="grid" id="grid"></div>
+
+    <!-- 对话弹窗 -->
+    <div id="dlg">
+        <div class="box">
+            <div class="head" id="dFace"></div>
+            <h3 id="dName"></h3>
+            <div class="bubble" id="dBubble"></div>
+            <div class="btns">
+                <button class="next" onclick="nextLine()">💬 继续说</button>
+                <button class="close" onclick="closeDlg()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <p class="sign">—— 冒险家1号 ——</p>
+
+    <script>
+        // ===== 冒险岛 NPC 图鉴 =====
+        var npcs = [
+            { face: "🧙", name: "老村长·阿木", job: "村庄向导", intro: "冒险岛的老村长，见多识广，欢迎每一位新来的冒险家。", lines: ["欢迎来到冒险岛，孩子！", "夜晚会有僵尸出没，天黑前记得回村！", "饿了就去挖草做面包，生存第一！"] },
+            { face: "⚔️", name: "剑士·铁柱", job: "战士训练师", intro: "退役的老剑士，教你挥剑打怪，嘴里总叼着根草。", lines: ["挥剑要快、准、狠！", "打怪能得经验，攒满能换星星！", "等你练出好剑，咱们一起去砍僵尸！"] },
+            { face: "🧝", name: "精灵·星儿", job: "弓箭手", intro: "森林里的精灵少女，箭法如神，性格害羞。", lines: ["你……你好，我叫星儿。", "森林里的动物很可爱，别欺负它们哦。", "需要箭的话，我可以教你做。"] },
+            { face: "🔮", name: "女巫·露娜", job: "魔法师", intro: "住在塔里的女巫，会炼药水，说话神神秘秘。", lines: ["年轻的冒险家，你来了。", "钻石剑的配方……我可是知道的哦。", "小心别摔死，死一次会扣星星的。"] },
+            { face: "🤖", name: "铁傀儡·大铁", job: "村庄守卫", intro: "村庄最忠诚的守卫，铁块做的，一拳打飞僵尸。", lines: ["轰隆……我是大铁。", "怪物靠近村庄，就交给我！", "你……也是朋友，我不打你。"] },
+            { face: "🐷", name: "小猪·哼哼", job: "宠物", intro: "老村长养的宠物猪，最爱睡觉和吃东西。", lines: ["哼～哼～", "（小猪翻了个身继续睡）", "你带着面包吗？分我一口呗！"] }
+        ];
+
+        var cur = 0, line = 0;
+        function openNpc(i) {
+            cur = i; line = 0;
+            document.getElementById("dFace").textContent = npcs[i].face;
+            document.getElementById("dName").textContent = npcs[i].name + "（" + npcs[i].job + "）";
+            document.getElementById("dBubble").textContent = npcs[i].lines[0];
+            document.getElementById("dlg").style.display = "flex";
+        }
+        function nextLine() {
+            line++;
+            if (line >= npcs[cur].lines.length) line = 0;
+            document.getElementById("dBubble").textContent = npcs[cur].lines[line];
+        }
+        function closeDlg() { document.getElementById("dlg").style.display = "none"; }
+
+        // 渲染卡片
+        var g = document.getElementById("grid");
+        var html = "";
+        for (var i = 0; i < npcs.length; i++) {
+            html += '<div class="npc" onclick="openNpc(' + i + ')">' +
+                '<span class="face">' + npcs[i].face + '</span>' +
+                '<h2>' + npcs[i].name + '</h2>' +
+                '<span class="job">' + npcs[i].job + '</span>' +
+                '<p>' + npcs[i].intro + '</p></div>';
+        }
+        g.innerHTML = html;
+    </script>
+</body>
+</html>
