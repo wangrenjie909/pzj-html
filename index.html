@@ -72,6 +72,21 @@
         .card.game .go { background: #ff8c00; }
         .card.surv .go { background: #4dd0e1; }
         .card.npc .go { background: #da77f2; }
+        /* ===== 冒险纪录面板 ===== */
+        .records {
+            display: inline-block;
+            background: #fff;
+            border: 4px solid #ffd43b;
+            border-radius: 24px;
+            padding: 18px 44px;
+            margin: 6px auto 26px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+            text-align: left;
+        }
+        .records h2 { margin: 0 0 10px; color: #ff8c00; font-size: 22px; text-align: center; }
+        .rec-item { font-size: 17px; color: #555; padding: 4px 0; }
+        .rec-item b { color: #e8590c; }
+        .rec-tip { font-size: 13px; color: #999; margin-top: 8px; text-align: center; }
         .sign {
             margin-top: 10px;
             color: #888;
@@ -107,6 +122,22 @@
         </a>
     </div>
 
+    <!-- 冒险纪录（本机保存） -->
+    <div class="records">
+        <h2>🏆 我的冒险纪录</h2>
+        <div class="rec-item">🎲 冒险小游戏最高纪录：<b id="recHiscore">0</b> 冒险币</div>
+        <div class="rec-item">⛏️ 像素生存世界星星：<b id="recStars">0</b> 颗 ⭐</div>
+        <div class="rec-tip">纪录存在本机浏览器里，玩游戏时会自动更新～</div>
+    </div>
+
     <p class="sign">—— 冒险家1号 ——</p>
+
+    <script>
+        // 读取两个游戏的纪录并显示在大厅
+        var recH = Number(localStorage.getItem("adventure_hiscore") || 0);
+        var recS = Number(localStorage.getItem("survival_stars") || 0);
+        document.getElementById("recHiscore").textContent = recH;
+        document.getElementById("recStars").textContent = recS;
+    </script>
 </body>
 </html>

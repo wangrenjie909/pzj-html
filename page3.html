@@ -201,7 +201,7 @@
     </div>
 
     <!-- HUD：工具（剑/斧 + 材质 + 耐久） -->
-    <div id="swordwrap">⚔️ <b id="swordName">木斧</b>（伤害 <span id="swordDmgTxt">7-8</span>｜耐久 <span id="swordDurTxt">60/60</span>）<br>按 <b>F</b> 切换剑/斧</div>
+    <div id="swordwrap">⚔️ <b id="swordName">木斧</b>（伤害 <span id="swordDmgTxt">7-8</span>｜耐久 <span id="swordDurTxt">60/60</span>）<br>按 <b>F</b> 切换剑/斧/镐 ｜ 🛡️ 防具：<span id="armorName">无</span></div>
 
     <!-- HUD：BOSS 血条 -->
     <div id="bossWrap">
@@ -262,9 +262,179 @@
             brick: { name: "石砖",    icon: "🧱", top: "#b0b6bc", side: "#8d9399", h: 50 },
             hay:   { name: "干草块",  icon: "🌾", top: "#f2c94c", side: "#d4a017", h: 50 },
             apple: { name: "苹果",    icon: "🍎", top: "#ff6b6b", side: "#d63f3f", h: 30 },
+            porkchop: { name: "生猪排", icon: "🥩", top: "#ff9d9d", side: "#e06c6c", h: 30 },
+            beef:  { name: "生牛肉",  icon: "🥩", top: "#e05555", side: "#b03a3a", h: 30 },
+            chicken: { name: "生鸡肉", icon: "🍗", top: "#ffe3b3", side: "#e0b98a", h: 30 },
+            wool:  { name: "羊毛",    icon: "🧶", top: "#f8f8f2", side: "#e8e8e0", h: 50 },
+            emerald: { name: "绿宝石", icon: "💚", top: "#5ee06e", side: "#3cb84c", h: 40 },
+            rotten: { name: "腐肉",   icon: "🧟", top: "#8fae6a", side: "#6d8f4a", h: 30 },
+            bone:  { name: "骨头",    icon: "🦴", top: "#f2ecd8", side: "#ddd3b8", h: 30 },
+            pearl: { name: "末影珍珠", icon: "🟣", top: "#c56ae0", side: "#9a3fb8", h: 40 },
+            star:  { name: "下界之星", icon: "⭐", top: "#ffe066", side: "#f5c518", h: 40 },
+            egg:   { name: "龙蛋",    icon: "🥚", top: "#d9c9b0", side: "#b8a88f", h: 40 },
+            stick: { name: "木棍",    icon: "🥢", top: "#c49a63", side: "#8d6e63", h: 30 },
+            iron:  { name: "铁锭",    icon: "🔩", top: "#d8dee6", side: "#adb5bd", h: 40 },
+            bed:   { name: "床",      icon: "🛏️", top: "#e03131", side: "#c22525", h: 40 },
+            furnace: { name: "熔炉",  icon: "🔥", top: "#6c757d", side: "#495057", h: 50 },
+            cooked_porkchop: { name: "熟猪排", icon: "🥓", top: "#e8a88a", side: "#c97e5e", h: 30 },
+            cooked_beef: { name: "熟牛排", icon: "🥩", top: "#b05c4a", side: "#8a4030", h: 30 },
+            cooked_chicken: { name: "熟鸡肉", icon: "🍗", top: "#e8b98a", side: "#c9965e", h: 30 },
             torch: { name: "火把",    icon: "🔥", top: "#c49a63", side: "#8d6e63", h: 60 },
             craft: { name: "工作台",  icon: "🛠️", top: "#e0b98a", side: "#a37b4a", h: 46 }
         };
+
+        // ===== MC 风格像素纹理（16×16，确定性生成，画质升级） =====
+        function tHash(x) {
+            x = (x << 13) ^ x;
+            x = (x * (x * x * 15731 + 789221) + 1376312589) & 0x7fffffff;
+            return x / 0x7fffffff;
+        }
+        function tnz(u, v, salt) { return tHash((u * 73856093 + v * 19349663 + salt * 83492791) | 0); }
+        function clamp255(v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
+        function makeTex(gen) {
+            var a = [];
+            for (var tv = 0; tv < 16; tv++) { var row = []; for (var tu = 0; tu < 16; tu++) row.push(gen(tu, tv)); a.push(row); }
+            return a;
+        }
+        var TEX = {};
+        TEX.dirt = makeTex(function (u, v) { var n = tnz(u, v, 11), d = (n - 0.5) * 26; return [clamp255(134 + d), clamp255(96 + d), clamp255(67 + d)]; });
+        TEX.stone = makeTex(function (u, v) { var n = tnz(u, v, 23), d = (n - 0.5) * 42; return [clamp255(126 + d), clamp255(126 + d), clamp255(126 + d)]; });
+        TEX.grass_top = makeTex(function (u, v) { var n = tnz(u, v, 37), d = (n - 0.5) * 34; return [clamp255(106 + d * 0.6), clamp255(170 + d), clamp255(64 + d * 0.4)]; });
+        TEX.grass_side = makeTex(function (u, v) {
+            if (v < 4) { var n = tnz(u, v, 41), d = (n - 0.5) * 30; return [clamp255(100 + d), clamp255(165 + d), clamp255(60 + d * 0.5)]; }
+            var m = tnz(u, v, 43), e = (m - 0.5) * 24; return [clamp255(134 + e), clamp255(96 + e), clamp255(67 + e)];
+        });
+        TEX.tree_side = makeTex(function (u, v) { var n = tnz(u, v, 53), d = (n - 0.5) * 30; return [clamp255(101 + d), clamp255(67 + d), clamp255(33 + d)]; });
+        TEX.tree_top = makeTex(function (u, v) {
+            var dx = u - 7.5, dy = v - 7.5, r = Math.sqrt(dx * dx + dy * dy);
+            var ring = (Math.floor(r) % 2 === 0) ? 150 : 110;
+            var n = tnz(u, v, 59), d = (n - 0.5) * 18;
+            return [clamp255(ring + d), clamp255(ring * 0.68 + d), clamp255(ring * 0.35 + d)];
+        });
+        TEX.leaf = makeTex(function (u, v) { var n = tnz(u, v, 61), d = (n - 0.5) * 46; return [clamp255(64 + d * 0.6), clamp255(142 + d), clamp255(48 + d * 0.3)]; });
+        TEX.gem = makeTex(function (u, v) { var n = tnz(u, v, 67); var c = n > 0.82 ? 30 : (n > 0.5 ? 6 : -8); return [clamp255(86 + c), clamp255(210 + c), clamp255(224 + c)]; });
+        TEX.plank = makeTex(function (u, v) { var n = tnz(u, v, 71), d = (n - 0.5) * 26; var strip = (v % 4 < 2) ? 6 : -4; return [clamp255(162 + d + strip), clamp255(125 + d + strip), clamp255(82 + d + strip * 0.6)]; });
+        TEX.brick = makeTex(function (u, v) {
+            var row = Math.floor(v / 4), off = (row % 2) * 4;
+            if ((v % 4) >= 3 || (u + off) % 4 >= 3) return [92, 92, 92];
+            var n = tnz(u, v, 73), d = (n - 0.5) * 24;
+            return [clamp255(132 + d), clamp255(132 + d), clamp255(132 + d)];
+        });
+        TEX.hay = makeTex(function (u, v) { var n = tnz(u, v, 79), d = (n - 0.5) * 24; var strip = (v % 4 < 2) ? 10 : -8; return [clamp255(198 + d + strip), clamp255(164 + d + strip * 0.7), clamp255(58 + d * 0.4 + strip * 0.3)]; });
+        TEX.craft_top = makeTex(function (u, v) { var n = tnz(u, v, 83), d = (n - 0.5) * 22; if ((u >= 6 && u <= 9) || (v >= 6 && v <= 9)) return [86, 58, 34]; return [clamp255(168 + d), clamp255(132 + d), clamp255(88 + d)]; });
+        TEX.craft_side = makeTex(function (u, v) { var n = tnz(u, v, 85), d = (n - 0.5) * 22; return [clamp255(158 + d), clamp255(122 + d), clamp255(80 + d)]; });
+        TEX.bread = makeTex(function (u, v) { var n = tnz(u, v, 89), d = (n - 0.5) * 30; return [clamp255(204 + d), clamp255(152 + d), clamp255(76 + d * 0.6)]; });
+        TEX.apple = makeTex(function (u, v) { var n = tnz(u, v, 97), d = (n - 0.5) * 30; if (u < 3 && v < 3) return [80, 140, 60]; return [clamp255(200 + d), clamp255(60 + d * 0.4), clamp255(50 + d * 0.4)]; });
+        TEX.netherrack = makeTex(function (u, v) { var n = tnz(u, v, 101), d = (n - 0.5) * 44; return [clamp255(122 + d), clamp255(52 + d * 0.5), clamp255(42 + d * 0.3)]; });
+        TEX.endstone = makeTex(function (u, v) { var n = tnz(u, v, 103), d = (n - 0.5) * 30; return [clamp255(218 + d), clamp255(210 + d), clamp255(160 + d)]; });
+        TEX.soulsand = makeTex(function (u, v) { var n = tnz(u, v, 107), d = (n - 0.5) * 26; return [clamp255(112 + d), clamp255(102 + d), clamp255(88 + d)]; });
+        // 生物掉落物（MC 风格）
+        TEX.porkchop = makeTex(function (u, v) { var n = tnz(u, v, 111), d = (n - 0.5) * 30; return [clamp255(235 + d), clamp255(150 + d), clamp255(150 + d * 0.5)]; });
+        TEX.beef = makeTex(function (u, v) { var n = tnz(u, v, 113), d = (n - 0.5) * 28; return [clamp255(215 + d), clamp255(88 + d * 0.5), clamp255(88 + d * 0.5)]; });
+        TEX.chicken = makeTex(function (u, v) { var n = tnz(u, v, 115), d = (n - 0.5) * 26; return [clamp255(238 + d), clamp255(200 + d * 0.6), clamp255(150 + d * 0.5)]; });
+        TEX.wool = makeTex(function (u, v) { var n = tnz(u, v, 117), d = (n - 0.5) * 14; return [clamp255(248 + d), clamp255(248 + d), clamp255(240 + d)]; });
+        TEX.emerald = makeTex(function (u, v) { var n = tnz(u, v, 119), d = (n - 0.5) * 20; var c = n > 0.8 ? 30 : 0; return [clamp255(70 + c), clamp255(200 + d + c), clamp255(90 + c)]; });
+        TEX.rotten = makeTex(function (u, v) { var n = tnz(u, v, 121), d = (n - 0.5) * 30; return [clamp255(130 + d), clamp255(160 + d * 0.6), clamp255(90 + d * 0.4)]; });
+        TEX.bone = makeTex(function (u, v) { var n = tnz(u, v, 123), d = (n - 0.5) * 22; return [clamp255(240 + d), clamp255(232 + d), clamp255(205 + d)]; });
+        TEX.pearl = makeTex(function (u, v) { var n = tnz(u, v, 125), d = (n - 0.5) * 24; var c = n > 0.75 ? 40 : 0; return [clamp255(170 + d * 0.4 + c), clamp255(90 + d * 0.3 + c * 0.5), clamp255(200 + d + c)]; });
+        TEX.star = makeTex(function (u, v) { var n = tnz(u, v, 127), d = (n - 0.5) * 24; return [clamp255(250 + d), clamp255(215 + d * 0.6), clamp255(60 + d * 0.3)]; });
+        TEX.egg = makeTex(function (u, v) { var n = tnz(u, v, 129), d = (n - 0.5) * 20; return [clamp255(216 + d), clamp255(196 + d), clamp255(165 + d)]; });
+        // 材料与功能方块（MC 合成链）
+        TEX.stick = makeTex(function (u, v) { var n = tnz(u, v, 131), d = (n - 0.5) * 26; return [clamp255(178 + d), clamp255(136 + d), clamp255(78 + d)]; });
+        TEX.iron = makeTex(function (u, v) { var n = tnz(u, v, 133), d = (n - 0.5) * 22; var c = n > 0.8 ? 26 : 0; return [clamp255(210 + d + c), clamp255(214 + d + c), clamp255(222 + d + c)]; });
+        TEX.bed = makeTex(function (u, v) {
+            if ((Math.floor(u / 4) + Math.floor(v / 4)) % 2 === 0) return [200, 45, 45];
+            var n = tnz(u, v, 135), d = (n - 0.5) * 16;
+            return [clamp255(238 + d), clamp255(240 + d), clamp255(242 + d)];
+        });
+        TEX.furnace = makeTex(function (u, v) {
+            var n = tnz(u, v, 137), d = (n - 0.5) * 26;
+            if (u >= 5 && u <= 10 && v >= 5 && v <= 10) return [40, 40, 44];   // 熔炉口
+            return [clamp255(120 + d), clamp255(122 + d), clamp255(126 + d)];
+        });
+        TEX.cooked_porkchop = makeTex(function (u, v) { var n = tnz(u, v, 139), d = (n - 0.5) * 24; return [clamp255(226 + d), clamp255(150 + d * 0.5), clamp255(110 + d * 0.5)]; });
+        TEX.cooked_beef = makeTex(function (u, v) { var n = tnz(u, v, 141), d = (n - 0.5) * 24; return [clamp255(168 + d), clamp255(84 + d * 0.5), clamp255(64 + d * 0.5)]; });
+        TEX.cooked_chicken = makeTex(function (u, v) { var n = tnz(u, v, 143), d = (n - 0.5) * 24; return [clamp255(226 + d), clamp255(160 + d * 0.5), clamp255(100 + d * 0.5)]; });
+
+        // 纹理 → canvas（放大时关闭平滑，保留 MC 像素颗粒感）
+        function texCanvas(tex) {
+            var c = document.createElement("canvas");
+            c.width = 16; c.height = 16;
+            var c2 = c.getContext("2d");
+            for (var tv = 0; tv < 16; tv++)
+                for (var tu = 0; tu < 16; tu++) {
+                    var p = tex[tv][tu];
+                    c2.fillStyle = "rgb(" + p[0] + "," + p[1] + "," + p[2] + ")";
+                    c2.fillRect(tu, tv, 1, 1);
+                }
+            return c;
+        }
+        var TEXC = {};
+        (function buildTexC() {
+            var map = {
+                grass: { top: TEX.grass_top, side: TEX.grass_side },
+                dirt: TEX.dirt, stone: TEX.stone,
+                tree: { top: TEX.tree_top, side: TEX.tree_side },
+                leaf: TEX.leaf, gem: TEX.gem, plank: TEX.plank, brick: TEX.brick,
+                hay: TEX.hay, craft: { top: TEX.craft_top, side: TEX.craft_side },
+                bread: TEX.bread, apple: TEX.apple,
+                netherrack: TEX.netherrack, endstone: TEX.endstone, soulsand: TEX.soulsand,
+                porkchop: TEX.porkchop, beef: TEX.beef, chicken: TEX.chicken, wool: TEX.wool,
+                emerald: TEX.emerald, rotten: TEX.rotten, bone: TEX.bone, pearl: TEX.pearl,
+                star: TEX.star, egg: TEX.egg,
+                stick: TEX.stick, iron: TEX.iron, bed: TEX.bed, furnace: TEX.furnace,
+                cooked_porkchop: TEX.cooked_porkchop, cooked_beef: TEX.cooked_beef, cooked_chicken: TEX.cooked_chicken
+            };
+            for (var k in map) {
+                var v = map[k];
+                if (v.top) TEXC[k] = { top: texCanvas(v.top), side: texCanvas(v.side) };
+                else TEXC[k] = { side: texCanvas(v) };
+            }
+        })();
+
+        // 各维度的雾色（MC 风格距离雾）
+        var FOG = { overworld: [196, 232, 250], nether: [84, 26, 14], end: [24, 16, 44], soul: [64, 78, 100] };
+        function fogT(dist) { return Math.max(0, Math.min(1, (dist - 38) / 55)); }
+
+        // 在投影四边形上画纹理（仿射近似）+ 明暗罩 + 距离雾
+        function drawTexFace(pts, texCv, shade, dist) {
+            var x0 = pts[0].sx, y0 = pts[0].sy;
+            ctx.save();
+            ctx.transform(pts[1].sx - x0, pts[1].sy - y0, pts[3].sx - x0, pts[3].sy - y0, x0, y0);
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(texCv, 0, 0);
+            ctx.restore();
+            shadeFog(pts, shade, dist);
+        }
+        // 纯色面 + 明暗罩 + 距离雾
+        function drawFlatFace(pts, color, shade, dist) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].sx, pts[0].sy);
+            for (var q = 1; q < 4; q++) ctx.lineTo(pts[q].sx, pts[q].sy);
+            ctx.closePath();
+            ctx.fill();
+            shadeFog(pts, shade, dist);
+        }
+        // 明暗黑罩 + 雾罩
+        function shadeFog(pts, shade, dist) {
+            var need = shade > 0.01 || fogT(dist) > 0.01;
+            if (!need) return;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].sx, pts[0].sy);
+            for (var q = 1; q < 4; q++) ctx.lineTo(pts[q].sx, pts[q].sy);
+            ctx.closePath();
+            if (shade > 0.01) {
+                ctx.fillStyle = "rgba(0,0,0," + shade.toFixed(3) + ")";
+                ctx.fill();
+            }
+            var ft = fogT(dist);
+            if (ft > 0.01) {
+                var fg = FOG[dim];
+                ctx.fillStyle = "rgba(" + fg[0] + "," + fg[1] + "," + fg[2] + "," + (ft * 0.92).toFixed(3) + ")";
+                ctx.fill();
+            }
+        }
 
         // ===== 维度 =====
         var dim = "overworld";   // overworld 主世界 / nether 下界 / end 末地 / soul 灵魂谷
@@ -290,7 +460,9 @@
         var blocks = [];      // {x,y,z,w,h,d,top,side,type}
         var animals = [];
         var holes = [];       // 被挖开的地面坑 {x, z}（对齐 8 网格）
-        var bag = { grass: 0, dirt: 0, stone: 0, tree: 0, leaf: 0, gem: 0, bread: 0, plank: 0, brick: 0, hay: 0, apple: 0, craft: 1, torch: 0 };
+        var bag = { grass: 0, dirt: 0, stone: 0, tree: 0, leaf: 0, gem: 0, bread: 0, plank: 0, brick: 0, hay: 0, apple: 0, craft: 1, torch: 0,
+            porkchop: 0, beef: 0, chicken: 0, wool: 0, emerald: 0, rotten: 0, bone: 0, pearl: 0, star: 0, egg: 0,
+            stick: 0, iron: 0, bed: 0, furnace: 0, cooked_porkchop: 0, cooked_beef: 0, cooked_chicken: 0 };
         var hp = 20, dead = false;   // MC 式：10 颗心 = 20 生命
         var fallStartY = null;
 
@@ -319,44 +491,75 @@
         var FOODS = {
             bread: { name: "面包", heal: 6 },
             grass: { name: "草", heal: 1 },
-            apple: { name: "苹果", heal: 4 }
+            apple: { name: "苹果", heal: 4 },
+            porkchop: { name: "生猪排", heal: 4 },
+            beef: { name: "生牛肉", heal: 5 },
+            chicken: { name: "生鸡肉", heal: 3 },
+            rotten: { name: "腐肉", heal: 2, poison: true },   // MC 腐肉：有几率中毒
+            cooked_porkchop: { name: "熟猪排", heal: 6 },
+            cooked_beef: { name: "熟牛排", heal: 8 },
+            cooked_chicken: { name: "熟鸡肉", heal: 5 }
         };
         function eatFood() {
             if (paused || dead) return true;   // 暂停/死亡：右键不触发别的
             var sel = HOTBAR[hotSel];
-            if (!sel) return false;            // 没选中 → 右键照常放方块
-            var f = FOODS[sel];
+            var f = sel ? FOODS[sel] : null;
+            var auto = false;
             if (!f || bag[sel] <= 0) {
-                var nm = BLOCK_INFO[sel] ? BLOCK_INFO[sel].name : sel;
-                hudMsg("😖 " + nm + " 不能吃……（面包才行！）");
-                return false;                  // 非食物 → 右键照常放方块
+                // 选中格不能吃 → 自动从背包找一个食物（草太弱不算）
+                auto = true;
+                var oldSel = sel;
+                sel = null; f = null;
+                for (var k in FOODS) {
+                    if (k !== "grass" && bag[k] > 0) { sel = k; f = FOODS[k]; break; }
+                }
+                if (!f) {
+                    var nm = BLOCK_INFO[oldSel] ? BLOCK_INFO[oldSel].name : oldSel;
+                    hudMsg("😖 " + nm + " 不能吃，背包里也没有食物……（面包、肉才行！）");
+                    return false;              // 没有食物 → 右键照常放方块
+                }
             }
             if (hp >= 20) { hudMsg("❤️ 生命已经满了，不用吃"); return true; }
             bag[sel]--;
             hp = Math.min(20, hp + f.heal);
             updateHotbar();
             updateHP();
-            hudMsg("😋 吃了" + f.name + "，生命 +" + f.heal + "！");
+            hudMsg((auto ? "🍽️ 自动吃了背包里的" : "😋 吃了") + f.name + "，生命 +" + f.heal + "！");
+            if (f.poison && Math.random() < 0.3) {
+                hp = Math.max(0, hp - 2);
+                hudMsg("🤢 腐肉吃坏了肚子！中毒 -2 生命！");
+                updateHP();
+                if (hp <= 0) { dead = true; showDeath(); }
+            }
             return true;                       // 吃了 → 右键不再放方块
         }
 
-        // ===== 工具系统（MC 标准：剑 + 斧，木/石/钻石三材质） =====
+        // ===== 工具系统（MC 标准：剑 + 斧 + 镐，木/石/铁/钻石四材质） =====
         var TOOLS = {
             sword: [
                 { name: "木剑",   dmg: 4, dur: 60,   blade: "#c49a63", guard: "#8d6e63" },
-                { name: "石剑",   dmg: 5, dur: 130,  blade: "#c8ced4", guard: "#6c757d" },
+                { name: "石剑",   dmg: 5, dur: 131,  blade: "#c8ced4", guard: "#6c757d" },
+                { name: "铁剑",   dmg: 6, dur: 250,  blade: "#d8dee6", guard: "#8a9299" },
                 { name: "钻石剑", dmg: 7, dur: 1560, blade: "#7ee8fa", guard: "#38b6d8" }
             ],
             axe: [
                 { name: "木斧",   dmg: 7, dur: 60,   blade: "#c49a63", guard: "#8d6e63" },
-                { name: "石斧",   dmg: 9, dur: 130,  blade: "#c8ced4", guard: "#6c757d" },
+                { name: "石斧",   dmg: 9, dur: 131,  blade: "#c8ced4", guard: "#6c757d" },
+                { name: "铁斧",   dmg: 9, dur: 250,  blade: "#d8dee6", guard: "#8a9299" },
                 { name: "钻石斧", dmg: 9, dur: 1560, blade: "#7ee8fa", guard: "#38b6d8" }
+            ],
+            pick: [
+                { name: "木镐",   dmg: 3, dur: 60,   blade: "#c49a63", guard: "#8d6e63" },
+                { name: "石镐",   dmg: 4, dur: 131,  blade: "#c8ced4", guard: "#6c757d" },
+                { name: "铁镐",   dmg: 5, dur: 250,  blade: "#d8dee6", guard: "#8a9299" },
+                { name: "钻石镐", dmg: 6, dur: 1560, blade: "#7ee8fa", guard: "#38b6d8" }
             ]
         };
-        var toolKind = "axe";          // axe 斧头 / sword 剑
+        var toolKind = "axe";          // axe 斧头 / sword 剑 / pick 镐
         var toolAxe = { mat: 0, dur: 60 };      // 每种工具独立材质 + 耐久
         var toolSword = { mat: 0, dur: 60 };
-        function curTool() { return toolKind === "axe" ? toolAxe : toolSword; }
+        var toolPick = { mat: 0, dur: 60 };
+        function curTool() { return toolKind === "axe" ? toolAxe : (toolKind === "sword" ? toolSword : toolPick); }
         function curToolDef() { return TOOLS[toolKind][curTool().mat]; }
         function toolDmg() { return curToolDef().dmg + Math.floor(Math.random() * 2); }   // 伤害 ±0-1
         function updateSwordUI() {
@@ -375,16 +578,19 @@
             updateSwordUI();
         }
         function switchTool() {
-            toolKind = toolKind === "axe" ? "sword" : "axe";
+            // F 键循环：斧 → 剑 → 镐
+            toolKind = toolKind === "axe" ? "sword" : (toolKind === "sword" ? "pick" : "axe");
             var t = curToolDef();
             hudMsg("🔀 换上了" + t.name + "（伤害 " + t.dmg + "-" + (t.dmg + 1) + "）");
             updateSwordUI();
         }
         function craftTool(kind, mat) {
-            var need = mat === 1 ? { brick: 1, plank: 1 } : { gem: 2, plank: 1 };
-            for (var k in need) if (bag[k] < need[k]) { hudMsg("❗ 材料不够！需要 " + (mat === 1 ? "1 石砖 + 1 木板" : "2 钻石 + 1 木板")); return; }
+            var need = mat === 1 ? { brick: 1, stick: 1 }
+                : mat === 2 ? { iron: 2, stick: 1 }
+                : { gem: 2, stick: 1 };
+            for (var k in need) if (bag[k] < need[k]) { hudMsg("❗ 材料不够！需要 " + (mat === 1 ? "1 石砖 + 1 木棍" : mat === 2 ? "2 铁锭 + 1 木棍" : "2 钻石 + 1 木棍")); return; }
             for (var k2 in need) bag[k2] -= need[k2];
-            var store = kind === "axe" ? toolAxe : toolSword;
+            var store = kind === "axe" ? toolAxe : (kind === "sword" ? toolSword : toolPick);
             store.mat = mat; store.dur = TOOLS[kind][mat].dur;
             toolKind = kind;
             updateHotbar();
@@ -393,15 +599,34 @@
             openCraft();
         }
 
+        // ===== 盔甲系统（MC 标准：皮甲 / 铁甲 / 钻石甲，减伤） =====
+        var ARMOR_LEVELS = [
+            { name: "无", def: 0 },
+            { name: "皮甲", def: 1 },
+            { name: "铁甲", def: 2 },
+            { name: "钻石甲", def: 3 }
+        ];
+        var armorLevel = 0;
+        function armorDef() { return ARMOR_LEVELS[armorLevel].def; }
+        function applyArmor(dmg) { return Math.max(0, dmg - armorDef()); }   // 盔甲减伤（摔落不算）
+        function updateArmorUI() {
+            document.getElementById("armorName").textContent = ARMOR_LEVELS[armorLevel].name + (armorLevel > 0 ? "（-" + ARMOR_LEVELS[armorLevel].def + "）" : "");
+        }
+
         // ===== 星星系统 =====
         var playerExp = 0, stars = 0, deathCount = 0;
         // 攒星所需经验：星星越多越难攒（二次增长）
         function starNeed() { return 20 + stars * 10 + stars * stars * 5; }
+        // 星星纪录保存到本机（游戏大厅能读到）
+        function saveStars() {
+            try { localStorage.setItem("survival_stars", String(stars)); } catch (e) {}
+        }
         function gainPlayerExp(n) {
             playerExp += n;
             while (playerExp >= starNeed()) {
                 playerExp -= starNeed();
                 stars++;
+                saveStars();
                 hudMsg("⭐ 攒到一颗星！现在共 " + stars + " 颗！下一颗要 " + starNeed() + " 经验");
             }
             updateStarUI();
@@ -492,8 +717,9 @@
                 pr.x += pr.vx; pr.z += pr.vz;
                 if (Math.abs(pr.x - cam.x) < 1 && Math.abs(pr.z - cam.z) < 1.2 && cam.y > pr.y - 2 && cam.y < pr.y + 2) {
                     projectiles.splice(p, 1); p--;
-                    hp -= pr.dmg;
-                    hudMsg("💥 被" + (pr.kind === "dragon" ? "末影龙" : pr.kind === "wither" ? "凋零" : "幽灵王") + "击中！(-" + pr.dmg + ")");
+                    var rdmg = applyArmor(pr.dmg);
+                    hp -= rdmg;
+                    hudMsg("💥 被" + (pr.kind === "dragon" ? "末影龙" : pr.kind === "wither" ? "凋零" : "幽灵王") + "击中！(-" + rdmg + ")");
                     updateHP();
                     if (hp <= 0) showDeath();
                     continue;
@@ -629,8 +855,9 @@
                     if (pd > 1.7) { g.x += Math.sin(g.dir) * 0.09; g.z += Math.cos(g.dir) * 0.09; }
                     else if (g.atkCd <= 0) {
                         g.atkCd = 40;
-                        hp -= 6;
-                        hudMsg("😠 铁傀儡愤怒地一拳打向你！(-6)");
+                        var gdmg = applyArmor(6);
+                        hp -= gdmg;
+                        hudMsg("😠 铁傀儡愤怒地一拳打向你！(-" + gdmg + ")");
                         updateHP();
                         if (hp <= 0) { dead = true; showDeath(); }
                     }
@@ -729,21 +956,24 @@
             var x = b.x, y = b.y, z = b.z, w = b.w, h = b.h, d = b.d;
             var cpr = project(x, y, z);
             if (cpr.behind) return;
+            var dist = cpr.z;   // 到相机的深度（雾效用）
             var vs = [
                 [x - w / 2, y - h / 2, z - d / 2], [x + w / 2, y - h / 2, z - d / 2],
                 [x + w / 2, y + h / 2, z - d / 2], [x - w / 2, y + h / 2, z - d / 2],
                 [x - w / 2, y - h / 2, z + d / 2], [x + w / 2, y - h / 2, z + d / 2],
                 [x + w / 2, y + h / 2, z + d / 2], [x - w / 2, y + h / 2, z + d / 2]
             ];
+            // MC 风格面明暗：顶面最亮，侧面次之，底面最暗
             var faces = [
-                { idx: [4, 5, 6, 7], n: [0, 0, 1],  c: b.side },
-                { idx: [1, 0, 3, 2], n: [0, 0, -1], c: b.side },
-                { idx: [5, 1, 2, 6], n: [1, 0, 0],  c: b.side },
-                { idx: [0, 4, 7, 3], n: [-1, 0, 0], c: b.side },
-                { idx: [3, 7, 6, 2], n: [0, 1, 0],  c: b.top },
-                { idx: [0, 1, 5, 4], n: [0, -1, 0], c: b.side }
+                { idx: [4, 5, 6, 7], n: [0, 0, 1],  c: b.side, f: 0.8 },
+                { idx: [1, 0, 3, 2], n: [0, 0, -1], c: b.side, f: 0.8 },
+                { idx: [5, 1, 2, 6], n: [1, 0, 0],  c: b.side, f: 0.62 },
+                { idx: [0, 4, 7, 3], n: [-1, 0, 0], c: b.side, f: 0.62 },
+                { idx: [3, 7, 6, 2], n: [0, 1, 0],  c: b.top,  f: 1.0 },
+                { idx: [0, 1, 5, 4], n: [0, -1, 0], c: b.side, f: 0.5 }
             ];
             var vx = cam.x - x, vy = cam.y - y, vz = cam.z - z;
+            var tc2 = TEXC[b.type];
             for (var f = 0; f < faces.length; f++) {
                 var face = faces[f];
                 if (face.n[0] * vx + face.n[1] * vy + face.n[2] * vz >= 0) continue;
@@ -755,28 +985,11 @@
                     pts.push(p);
                 }
                 if (!ok) continue;
-                ctx.fillStyle = face.c;
-                ctx.beginPath();
-                ctx.moveTo(pts[0].sx, pts[0].sy);
-                for (var q = 1; q < 4; q++) ctx.lineTo(pts[q].sx, pts[q].sy);
-                ctx.closePath();
-                ctx.fill();
-                // 纹理线（按方块类型画出纹路）
-                var tex = b.type;
-                if (tex === "plank") texLines(pts, "rgba(0,0,0,0.28)", 3, 0);
-                else if (tex === "craft") { texLines(pts, "rgba(0,0,0,0.3)", 3, 0); texLines(pts, "rgba(0,0,0,0.3)", 3, 1); }
-                else if (tex === "stone" || tex === "brick") { texLines(pts, "rgba(0,0,0,0.24)", 2, 0); texLines(pts, "rgba(0,0,0,0.24)", 2, 1); }
-                else if (tex === "dirt") texLines(pts, "rgba(0,0,0,0.16)", 2, 0);
-                else if (tex === "grass") texLines(pts, "rgba(0,0,0,0.14)", 2, 0);
-                else if (tex === "tree") texLines(pts, "rgba(0,0,0,0.2)", 3, 0);
-                else if (tex === "leaf") texLines(pts, "rgba(0,0,0,0.12)", 2, 0);
-                else if (tex === "gem") texLines(pts, "rgba(255,255,255,0.35)", 2, 0);
-                else if (tex === "grass") { texLines(pts, "rgba(20,100,35,0.5)", 2, 0); texLines(pts, "rgba(20,100,35,0.5)", 2, 1); }
-                else if (tex === "tree") texLines(pts, "rgba(0,0,0,0.32)", 3, 1);
-                else if (tex === "leaf") { texLines(pts, "rgba(20,90,30,0.45)", 2, 0); texLines(pts, "rgba(20,90,30,0.45)", 2, 1); }
-                else if (tex === "hay") texLines(pts, "rgba(140,100,0,0.35)", 3, 0);
-                else if (tex === "gem") { texLines(pts, "rgba(255,255,255,0.45)", 2, 0); texLines(pts, "rgba(255,255,255,0.45)", 2, 1); }
-                else if (tex === "bread") { texLines(pts, "rgba(150,70,0,0.4)", 3, 0); texLines(pts, "rgba(150,70,0,0.4)", 3, 1); }
+                // 有纹理 → 纹理贴面；否则纯色（生物等），统一加明暗 + 雾
+                var cv = null;
+                if (tc2) cv = face.n[1] > 0 ? (tc2.top || tc2.side) : tc2.side;
+                if (cv) drawTexFace(pts, cv, 1 - face.f, dist);
+                else drawFlatFace(pts, face.c, 1 - face.f, dist);
             }
         }
 
@@ -954,7 +1167,7 @@
                 // 柄尾
                 ctx.fillStyle = t.guard;
                 ctx.fillRect(0, 6, 12, 8);
-            } else {
+            } else if (toolKind === "sword") {
                 // 剑（材质色剑身 + 护手）
                 ctx.fillStyle = t.blade;
                 ctx.fillRect(-6, -150, 12, 120);
@@ -972,6 +1185,36 @@
                 // 柄尾
                 ctx.fillStyle = t.guard;
                 ctx.fillRect(-7, 8, 14, 8);
+            } else {
+                // 镐（木柄 + 镐头，材质色）
+                ctx.fillStyle = "#6d4c41";
+                ctx.strokeStyle = "#4a3222"; ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, 8);
+                ctx.lineTo(6, -72);
+                ctx.lineTo(13, -70);
+                ctx.lineTo(7, 8);
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+                // 镐头（弧形，材质色）
+                ctx.fillStyle = t.blade;
+                ctx.strokeStyle = t.guard;
+                ctx.beginPath();
+                ctx.moveTo(4, -70);
+                ctx.lineTo(-34, -84);
+                ctx.lineTo(-36, -68);
+                ctx.lineTo(16, -50);
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+                // 镐头高光
+                ctx.fillStyle = "#ffffff";
+                ctx.beginPath();
+                ctx.moveTo(16, -50);
+                ctx.lineTo(-36, -68);
+                ctx.lineTo(-34, -73);
+                ctx.lineTo(14, -54);
+                ctx.closePath(); ctx.fill();
+                // 柄尾
+                ctx.fillStyle = t.guard;
+                ctx.fillRect(0, 6, 12, 8);
             }
             ctx.restore();
         }
@@ -1035,12 +1278,15 @@
                     if (kind === "monster") killMonster(best);
                     else if (kind === "animal") killAnimal(best);
                     else if (kind === "boss") {
-                        bag.gem += 5; bag.stone += 5;
+                        var bd2 = best.kind === "wither" ? { item: "star", n: 1, msg: "下界之星" }
+                            : best.kind === "dragon" ? { item: "egg", n: 1, msg: "龙蛋" }
+                            : { item: "gem", n: 5, msg: "钻石" };
+                        bag[bd2.item] += bd2.n; bag.stone += 5;
                         gainPlayerExp(60);
-                        spawnDrop(best.x, best.z, "gem", 5);
+                        spawnDrop(best.x, best.z, bd2.item, bd2.n + 1);
                         updateHotbar();
                         updateBossUI();
-                        hudMsg("🏆 打败了" + best.name + "！掉落钻石×5、石头×5，经验 +60！");
+                        hudMsg("🏆 打败了" + best.name + "！掉落 " + bd2.msg + "×" + bd2.n + "、石头×5，经验 +60！");
                     } else {
                         best.hp = 0;
                         bag.stone += 3;
@@ -1055,26 +1301,49 @@
             }
         }
 
+        // MC 风格：每种动物掉对应物品
+        var ANIMAL_DROPS = {
+            pig:      { item: "porkchop", n: 1, msg: "生猪排" },
+            sheep:    { item: "wool",     n: 2, msg: "羊毛" },
+            cow:      { item: "beef",     n: 1, msg: "生牛肉" },
+            chicken:  { item: "chicken",  n: 1, msg: "生鸡肉" },
+            villager: { item: "emerald",  n: 1, msg: "绿宝石" }
+        };
         function killAnimal(a) {
             a.hp = 0;
-            var dropPool = (a.type === "villager") ? ["gem", "bread", "plank"] : ["bread", "dirt", "stone", "plank", "apple"];
-            var drop = dropPool[Math.floor(Math.random() * dropPool.length)];
-            bag[drop]++;
-            spawnDrop(a.x, a.z, drop, 2);
+            var d = ANIMAL_DROPS[a.type] || { item: "bread", n: 1, msg: "面包" };
+            if (d.item) {
+                bag[d.item] += d.n;
+                spawnDrop(a.x, a.z, d.item, d.n + 1);
+            }
             gainPlayerExp(6);
             updateHotbar();
-            hudMsg("💀 打败了" + ANIMAL_NAMES[a.type] + "！掉落 " + BLOCK_INFO[drop].name + "×1，经验 +6");
+            hudMsg("💀 打败了" + ANIMAL_NAMES[a.type] + "！掉落 " + (d.msg || "无") + "×" + d.n + "，经验 +6");
             setTimeout(spawnAnimal, 5000);
         }
 
+        // MC 风格：每种怪物掉对应物品
+        var MONSTER_DROPS = {
+            "僵尸":     { item: "rotten", n: 1, msg: "腐肉" },
+            "骷髅":     { item: "bone",   n: 1, msg: "骨头" },
+            "僵尸猪人": { item: "rotten", n: 1, msg: "腐肉" },
+            "恶魂":     { item: "bone",   n: 1, msg: "骨头" },
+            "岩浆怪":   { item: "rotten", n: 1, msg: "腐肉" },
+            "末影人":   { item: "pearl",  n: 1, msg: "末影珍珠" },
+            "末影螨":   { item: null,     n: 0, msg: "无" },
+            "怨灵骷髅": { item: "bone",   n: 1, msg: "骨头" },
+            "幽灵":     { item: "bone",   n: 1, msg: "骨头" }
+        };
         function killMonster(m) {
             m.hp = 0;
-            bag.stone += 2; bag.dirt += 1;
-            spawnDrop(m.x, m.z, "stone", 3);
-            spawnDrop(m.x, m.z, "dirt", 2);
+            var d = MONSTER_DROPS[m.type.name] || { item: "stone", n: 2, msg: "石头" };
+            if (d.item) {
+                bag[d.item] += d.n;
+                spawnDrop(m.x, m.z, d.item, d.n + 1);
+            }
             gainPlayerExp(12);
             updateHotbar();
-            hudMsg("💀 打败" + m.type.name + "！掉落石头×2、泥土×1，经验 +12");
+            hudMsg("💀 打败" + m.type.name + "！" + (d.item ? "掉落 " + d.msg + "×" + d.n + "，" : "没有掉落物，") + "经验 +12");
             // 夜晚才会重新刷新怪物（白天不刷）
         }
 
@@ -1161,6 +1430,13 @@
             ctx.closePath();
             ctx.fill();
         }
+        // 投影 4 个 3D 点 → 屏幕四边形（纹理贴面用）
+        function projPts(p1, p2, p3, p4) {
+            var a = project(p1[0], p1[1], p1[2]), b = project(p2[0], p2[1], p2[2]);
+            var c = project(p3[0], p3[1], p3[2]), d = project(p4[0], p4[1], p4[2]);
+            if (!a || !b || !c || !d) return null;
+            return [a, b, c, d];
+        }
 
         // ===== 地面：方块格地形（立体、可挖、坡是方块阶梯） =====
         function drawGround() {
@@ -1173,14 +1449,18 @@
                 for (var gz = gz0; gz <= gz1; gz += cell) {
                     var hh = gH(gx + cell / 2, gz + cell / 2);
                     var bm = biomeAt(gx + cell / 2, gz + cell / 2);
-                    var even = Math.round((gx + gz) / cell) % 2 === 0;
-                    var topC = even ? "#5fae4e" : "#48913a", wallC = "#7a6a4a";
-                    if (dim === "nether") { topC = even ? "#9c4130" : "#7c3224"; wallC = "#5c2519"; }
-                    else if (dim === "end") { topC = even ? "#e0d5a8" : "#c9bd95"; wallC = "#a89c78"; }
-                    else if (dim === "soul") { topC = even ? "#8a95ab" : "#74809a"; wallC = "#5d687e"; }
-                    else if (bm === "mountain") { topC = "#8a9184"; wallC = "#6d7468"; }
                     var cc = project(gx + cell / 2, hh, gz + cell / 2);
                     if (cc.behind) continue;
+                    var dist = cc.z;   // 雾效用
+                    // 按维度/生态选择 MC 像素纹理
+                    var topTex = dim === "nether" ? TEXC.netherrack.side
+                        : dim === "end" ? TEXC.endstone.side
+                        : dim === "soul" ? TEXC.soulsand.side
+                        : (bm === "mountain" ? TEXC.stone.side : TEXC.grass.top);
+                    var wallTex = dim === "nether" ? TEXC.netherrack.side
+                        : dim === "end" ? TEXC.endstone.side
+                        : dim === "soul" ? TEXC.soulsand.side
+                        : (bm === "mountain" ? TEXC.stone.side : TEXC.grass.side);
                     // 挖掉的格：立体深坑
                     var holed = false;
                     for (var hi = 0; hi < holes.length; hi++) {
@@ -1189,17 +1469,24 @@
                     if (holed) {
                         var dh = hh - 2.5;
                         quad4(gx, dh, gz, gx + cell, dh, gz, gx + cell, dh, gz + cell, gx, dh, gz + cell, "#170f0a");
-                        quad4(gx, hh, gz, gx + cell, hh, gz, gx + cell, dh, gz, gx, dh, gz, "#4a3a28");
-                        quad4(gx, hh, gz + cell, gx + cell, hh, gz + cell, gx + cell, dh, gz + cell, gx, dh, gz + cell, "#5a4832");
-                        quad4(gx, hh, gz, gx, hh, gz + cell, gx, dh, gz + cell, gx, dh, gz, "#3d3020");
-                        quad4(gx + cell, hh, gz, gx + cell, hh, gz + cell, gx + cell, dh, gz + cell, gx + cell, dh, gz, "#5a4832");
+                        var wpp = projPts([gx, hh, gz], [gx + cell, hh, gz], [gx + cell, dh, gz], [gx, dh, gz]);
+                        if (wpp) drawTexFace(wpp, wallTex, 0.35, dist);
+                        wpp = projPts([gx, hh, gz + cell], [gx + cell, hh, gz + cell], [gx + cell, dh, gz + cell], [gx, dh, gz + cell]);
+                        if (wpp) drawTexFace(wpp, wallTex, 0.35, dist);
+                        wpp = projPts([gx, hh, gz], [gx, hh, gz + cell], [gx, dh, gz + cell], [gx, dh, gz]);
+                        if (wpp) drawTexFace(wpp, wallTex, 0.45, dist);
+                        wpp = projPts([gx + cell, hh, gz], [gx + cell, hh, gz + cell], [gx + cell, dh, gz + cell], [gx + cell, dh, gz]);
+                        if (wpp) drawTexFace(wpp, wallTex, 0.45, dist);
                         continue;
                     }
-                    // 顶面（草/泥方块格，线条更清晰）
-                    quad4(gx, hh, gz, gx + cell, hh, gz, gx + cell, hh, gz + cell, gx, hh, gz + cell, topC);
-                    ctx.strokeStyle = "rgba(0, 0, 0, 0.28)";
-                    ctx.lineWidth = 1.5;
-                    ctx.stroke();
+                    // 顶面（MC 像素纹理，2×2 细分更贴近透视，纹理更细密）
+                    var half = cell / 2;
+                    for (var si2 = 0; si2 < 2; si2++)
+                        for (var sj2 = 0; sj2 < 2; sj2++) {
+                            var ax0 = gx + si2 * half, az0 = gz + sj2 * half;
+                            var tpp = projPts([ax0, hh, az0], [ax0 + half, hh, az0], [ax0 + half, hh, az0 + half], [ax0, hh, az0 + half]);
+                            if (tpp) drawTexFace(tpp, topTex, 0, dist);
+                        }
                     // 草地上长小草（一簇簇，像 MC 的草丛，只有主世界）
                     if (dim === "overworld" && bm !== "mountain" && Math.abs((gx * 17 + gz * 29) % 5) < 4) {
                         var cl = 2 + Math.abs((gx * 3 + gz * 7) % 3);
@@ -1221,15 +1508,16 @@
                             }
                         }
                     }
-                    // 落差侧壁：邻居更低时露出泥土/石头壁（立体方块阶梯）
+                    // 落差侧壁：邻居更低时露出草皮/泥土壁（MC 像素纹理 + 明暗）
                     var hL = gH(gx - cell / 2, gz + cell / 2);
                     var hR = gH(gx + cell + cell / 2, gz + cell / 2);
                     var hB = gH(gx + cell / 2, gz - cell / 2);
                     var hF = gH(gx + cell / 2, gz + cell + cell / 2);
-                    if (hL < hh - 0.05) quad4(gx, hh, gz, gx, hh, gz + cell, gx, hL, gz + cell, gx, hL, gz, wallC);
-                    if (hR < hh - 0.05) quad4(gx + cell, hh, gz + cell, gx + cell, hh, gz, gx + cell, hL, gz, gx + cell, hL, gz + cell, wallC);
-                    if (hB < hh - 0.05) quad4(gx, hh, gz, gx + cell, hh, gz, gx + cell, hB, gz, gx, hB, gz, wallC);
-                    if (hF < hh - 0.05) quad4(gx + cell, hh, gz + cell, gx, hh, gz + cell, gx, hF, gz + cell, gx + cell, hF, gz + cell, wallC);
+                    var w1, w2, w3, w4;
+                    if (hL < hh - 0.05) { w1 = projPts([gx, hh, gz], [gx, hh, gz + cell], [gx, hL, gz + cell], [gx, hL, gz]); if (w1) drawTexFace(w1, wallTex, 0.3, dist); }
+                    if (hR < hh - 0.05) { w2 = projPts([gx + cell, hh, gz + cell], [gx + cell, hh, gz], [gx + cell, hR, gz], [gx + cell, hR, gz + cell]); if (w2) drawTexFace(w2, wallTex, 0.3, dist); }
+                    if (hB < hh - 0.05) { w3 = projPts([gx, hh, gz], [gx + cell, hh, gz], [gx + cell, hB, gz], [gx, hB, gz]); if (w3) drawTexFace(w3, wallTex, 0.3, dist); }
+                    if (hF < hh - 0.05) { w4 = projPts([gx + cell, hh, gz + cell], [gx, hh, gz + cell], [gx, hF, gz + cell], [gx + cell, hF, gz + cell]); if (w4) drawTexFace(w4, wallTex, 0.3, dist); }
                     // 点缀小花
                     if (Math.abs((gx * 31 + gz * 17) % 23) < 3) {
                         var fc = ["#ff6b6b", "#ffd43b", "#fff3bf"][Math.abs(gx * 3 + gz) % 3];
@@ -1294,10 +1582,13 @@
             if (dy > -0.05) return null;
             var t = -cam.y / dy;
             if (t <= 0 || t > 16) return null;
+            var hx = cam.x + Math.sin(cam.yaw) * Math.cos(cam.pitch) * t;
+            var hz = cam.z + Math.cos(cam.yaw) * Math.cos(cam.pitch) * t;
             return {
                 t: t,
-                x: cam.x + Math.sin(cam.yaw) * Math.cos(cam.pitch) * t,
-                z: cam.z + Math.cos(cam.yaw) * Math.cos(cam.pitch) * t
+                x: hx,
+                z: hz,
+                y: gH(hx, hz)   // 该点的地面高度（放置火把等用）
             };
         }
 
@@ -1307,17 +1598,26 @@
             var hit = raycast();
             if (hit) {
                 if (hit.type === "craft") { openCraft(); return; }   // 点工作台 → 打开合成
+                if (hit.type === "furnace") { openFurnace(); return; }   // 点熔炉 → 打开熔炉
+                var bonus = 0;
+                // MC 工具加成：镐挖石头/钻石/石砖 ×2，斧砍木头/树叶 ×2
+                if ((toolKind === "pick" && (hit.type === "stone" || hit.type === "gem" || hit.type === "brick")) ||
+                    (toolKind === "axe" && (hit.type === "tree" || hit.type === "leaf"))) bonus = 1;
                 for (var i = 0; i < blocks.length; i++) {
                     if (blocks[i] === hit) {
-                        bag[hit.type]++;
-                        spawnDrop(hit.x, hit.z, hit.type, 2);
+                        bag[hit.type] += 1 + bonus;
+                        spawnDrop(hit.x, hit.z, hit.type, 2 + bonus);
                         consumeDurability();   // 挖方块也耗耐久
                         blocks.splice(i, 1);
+                        if (hit.type === "bed") {   // 挖掉床 → 移除睡觉点
+                            for (var bi2 = beds.length - 1; bi2 >= 0; bi2--)
+                                if (Math.abs(beds[bi2].x - hit.x) < 0.6 && Math.abs(beds[bi2].z - hit.z) < 0.6) beds.splice(bi2, 1);
+                        }
                         break;
                     }
                 }
                 updateHotbar();
-                hudMsg("⛏️ 挖到 1 个" + BLOCK_INFO[hit.type].name + "！");
+                hudMsg("⛏️ 挖到 " + (1 + bonus) + " 个" + BLOCK_INFO[hit.type].name + (bonus ? "（工具加成！）" : "") + "！");
                 return;
             }
             // 挖地面：挖出 4x4 立体方块坑
@@ -1350,22 +1650,30 @@
         // 放方块（右键）
         function placeBlock() {
             if (paused || dead) return;
-            // 背包有火把时：右键放火把（照亮黑夜）
-            if (bag.torch > 0) {
+            // 背包有火把且当前没选中可放方块时：右键放火把（照亮黑夜）
+            var selTmp0 = HOTBAR[hotSel];
+            if (bag.torch > 0 && (!selTmp0 || FOODS[selTmp0] || bag[selTmp0] <= 0)) {
                 var gh3 = groundHit();
                 if (gh3) {
                     var nx = Math.round(gh3.x * 2) / 2, nz = Math.round(gh3.z * 2) / 2;
                     for (var tk = 0; tk < torches.length; tk++)
                         if (torches[tk].x === nx && torches[tk].z === nz) { hudMsg("这里已经有一支火把了"); return; }
                     bag.torch--;
-                    torches.push({ x: nx, z: nz, y: gh3.y });
+                    torches.push({ x: nx, z: nz, y: gH(nx, nz) });   // 火把立在目标格子的地面上
                     hudMsg("🔥 放下一支火把！夜晚不怕黑啦（剩余 " + bag.torch + "）");
                     return;
                 }
             }
             var sel = HOTBAR[hotSel];
             if (FOODS[sel]) return;   // 食物只能吃，不能放置
-            if (!sel || bag[sel] <= 0) { hudMsg("❗ 选中物品数量为 0，先挖一些吧！"); return; }
+            if (!sel || bag[sel] <= 0) {
+                // 选中格没货 → 自动从背包找一个可放置方块（工作台/火把除外）
+                sel = null;
+                for (var bk in bag) {
+                    if (bag[bk] > 0 && !FOODS[bk] && bk !== "craft" && bk !== "torch") { sel = bk; break; }
+                }
+                if (!sel) { hudMsg("❗ 背包里没有可放置的方块，先挖一些吧！"); return; }
+            }
             var info = BLOCK_INFO[sel];
             var hit = raycast();
             if (hit) {
@@ -1382,6 +1690,7 @@
                 var newY = hit.y + ny2 * (hit.h / 2 + 0.5);
                 var newZ = hit.z + nz2 * (hit.d / 2 + 0.5);
                 blocks.push({ x: newX, y: newY, z: newZ, w: 1, h: 1, d: 1, top: info.top, side: info.side, type: sel });
+                if (sel === "bed") beds.push({ x: newX, z: newZ });   // 床：睡觉点
                 bag[sel]--;
                 updateHotbar();
                 hudMsg("🧱 放置了 1 个" + info.name + "！");
@@ -1396,6 +1705,7 @@
                 return;
             }
             blocks.push({ x: gx, y: gH(gx, gz) + 0.5, z: gz, w: 1, h: 1, d: 1, top: info.top, side: info.side, type: sel });
+            if (sel === "bed") beds.push({ x: gx, z: gz });   // 床：睡觉点
             bag[sel]--;
             updateHotbar();
             hudMsg("🧱 在地面上放置了 1 个" + info.name + "！");
@@ -1477,7 +1787,8 @@
             { give: { tree: 3 }, get: { brick: 2 }, label: "3 木头 → 2 石砖" },
             { give: { bread: 2 }, get: { gem: 1 }, label: "2 面包 → 1 钻石" },
             { give: { grass: 3 }, get: { bread: 1 }, label: "3 草 → 1 面包" },
-            { give: { stone: 5 }, get: { plank: 2 }, label: "5 石头 → 2 木板" }
+            { give: { stone: 5 }, get: { plank: 2 }, label: "5 石头 → 2 木板" },
+            { give: { bone: 2 }, get: { gem: 1 }, label: "2 骨头 → 1 钻石" }
         ];
         function openTrade() {
             if (dead) return;
@@ -1548,11 +1859,18 @@
         }
         var RECIPES = [
             { out: "plank", n: 4, need: { tree: 1 }, label: "1 木头 → 4 木板" },
+            { out: "stick", n: 4, need: { plank: 2 }, label: "2 木板 → 4 木棍" },
             { out: "brick", n: 1, need: { stone: 3 }, label: "3 石头 → 1 石砖" },
             { out: "bread", n: 1, need: { grass: 2, dirt: 1 }, label: "2 草 + 1 泥土 → 1 面包" },
             { out: "apple", n: 1, need: { leaf: 3 }, label: "3 树叶 → 1 苹果" },
             { out: "bread", n: 2, need: { hay: 1 }, label: "1 干草块 → 2 面包" },
-            { out: "torch", n: 1, need: { grass: 2, tree: 1 }, label: "2 草 + 1 木头 → 1 火把" }
+            { out: "torch", n: 2, need: { stick: 1, tree: 1 }, label: "1 木棍 + 1 木头 → 2 火把" },
+            { out: "iron", n: 1, need: { stone: 3 }, label: "3 石头 → 1 铁锭" },
+            { out: "bed", n: 1, need: { wool: 3, plank: 3 }, label: "3 羊毛 + 3 木板 → 1 床" },
+            { out: "furnace", n: 1, need: { stone: 8 }, label: "8 石头 → 1 熔炉" },
+            { out: null, n: 0, need: { wool: 3 }, label: "3 羊毛 → 皮甲", kind: "armor", armor: 1 },
+            { out: null, n: 0, need: { iron: 3 }, label: "3 铁锭 → 铁甲", kind: "armor", armor: 2 },
+            { out: null, n: 0, need: { gem: 3 }, label: "3 钻石 → 钻石甲", kind: "armor", armor: 3 }
         ];
         var craftSel = 0;   // 当前选中的配方
         function openCraft() {
@@ -1572,24 +1890,29 @@
                 }
             }
             h += '</div>';
-            h += '<div class="craft-result">➡ ' + blockIcon(r.out) + ' ×' + (r.n || 1) + ' ' + BLOCK_INFO[r.out].name + '</div>';
+            // 产物（盔甲配方特殊显示）
+            var resName = r.kind === "armor" ? ("🛡️ " + ARMOR_LEVELS[r.armor].name + "（减伤 " + ARMOR_LEVELS[r.armor].def + "）")
+                : (blockIcon(r.out) + ' ×' + (r.n || 1) + ' ' + BLOCK_INFO[r.out].name);
+            h += '<div class="craft-result">➡ ' + resName + '</div>';
             // 配方标签
             h += '<div class="recipe-tabs">';
             for (var ri = 0; ri < RECIPES.length; ri++) {
                 h += '<button class="rtab' + (ri === craftSel ? " sel" : "") + '" onclick="selectCraft(' + ri + ')">' + RECIPES[ri].label.split("：")[0] + '</button>';
             }
             h += '</div>';
-            h += '<div class="row"><button class="btn-craftit" onclick="craft(' + craftSel + ')">⚒️ 制作 ' + BLOCK_INFO[r.out].name + '</button></div>';
-            // 制作工具（剑 / 斧头）
-            h += '<h2 style="margin-top:14px">⚒️ 制作工具</h2>';
+            var btnName = r.kind === "armor" ? ARMOR_LEVELS[r.armor].name : BLOCK_INFO[r.out].name;
+            h += '<div class="row"><button class="btn-craftit" onclick="craft(' + craftSel + ')">⚒️ 制作 ' + btnName + '</button></div>';
+            // 制作工具（剑 / 斧 / 镐）
+            h += '<h2 style="margin-top:14px">⚒️ 制作工具（木棍 + 材料）</h2>';
             var curT = curToolDef();
             h += '<div class="row"><span>当前：' + curT.name + '（伤害 ' + curT.dmg + '-' + (curT.dmg + 1) + '）</span></div>';
-            var matOpts = [[1, "石", "1 石砖 + 1 木板"], [2, "钻石", "2 钻石 + 1 木板"]];
+            var matOpts = [[1, "石", "1 石砖 + 1 木棍"], [2, "铁", "2 铁锭 + 1 木棍"], [3, "钻石", "2 钻石 + 1 木棍"]];
             for (var mi = 0; mi < matOpts.length; mi++) {
                 var mk = matOpts[mi][0], mn = matOpts[mi][1], ml = matOpts[mi][2];
                 if (curTool().mat >= mk) continue;   // 已有更高级就不用再做
                 h += '<div class="row"><span>⚔️ 做' + mn + '剑：' + ml + '</span><button onclick="craftTool(\'sword\',' + mk + ')">制作</button></div>';
                 h += '<div class="row"><span>🪓 做' + mn + '斧：' + ml + '</span><button onclick="craftTool(\'axe\',' + mk + ')">制作</button></div>';
+                h += '<div class="row"><span>⛏️ 做' + mn + '镐：' + ml + '</span><button onclick="craftTool(\'pick\',' + mk + ')">制作</button></div>';
             }
             h += '<div class="row"><button class="close" onclick="hidePanel()">关闭</button></div>';
             showPanel(h);
@@ -1602,9 +1925,42 @@
                 if (bag[need] < r.need[need]) return;
             }
             for (var need2 in r.need) bag[need2] -= r.need[need2];
-            bag[r.out] += (r.n || 1);
+            if (r.kind === "armor") {
+                armorLevel = Math.max(armorLevel, r.armor);
+                updateArmorUI();
+                hudMsg("🛡️ 穿上" + ARMOR_LEVELS[armorLevel].name + "！减伤 " + ARMOR_LEVELS[armorLevel].def);
+            } else {
+                bag[r.out] += (r.n || 1);
+            }
             updateHotbar();
             openCraft();   // 刷新界面
+        }
+
+        // ===== 熔炉系统（MC 风格：生肉 → 熟肉，回血更多） =====
+        var FURNACE_RECIPES = [
+            { in: "porkchop", out: "cooked_porkchop", label: "生猪排 → 熟猪排（回血 +6）" },
+            { in: "beef", out: "cooked_beef", label: "生牛肉 → 熟牛排（回血 +8）" },
+            { in: "chicken", out: "cooked_chicken", label: "生鸡肉 → 熟鸡肉（回血 +5）" }
+        ];
+        function openFurnace() {
+            if (dead) return;
+            var h = "<h2>🔥 熔炉</h2>";
+            for (var i = 0; i < FURNACE_RECIPES.length; i++) {
+                var r = FURNACE_RECIPES[i];
+                var ok = bag[r.in] > 0;
+                h += '<div class="row"><span>' + (ok ? "✅" : "❌") + ' ' + r.label + '（有 ' + bag[r.in] + ' 个）</span>' +
+                     '<button ' + (ok ? "" : 'disabled style="opacity:0.5"') + ' onclick="smelt(' + i + ')">🔥 烧制</button></div>';
+            }
+            h += '<div class="row"><button class="close" onclick="hidePanel()">关闭</button></div>';
+            showPanel(h);
+        }
+        function smelt(i) {
+            var r = FURNACE_RECIPES[i];
+            if (bag[r.in] <= 0) return;
+            bag[r.in]--; bag[r.out]++;
+            updateHotbar();
+            hudMsg("🔥 烤好了" + BLOCK_INFO[r.out].name + "！回血更多啦");
+            openFurnace();   // 刷新
         }
 
         // ===== 死亡 =====
@@ -1612,6 +1968,7 @@
             deathCount++;
             var lose = deathCount;   // 第几次死就扣几颗星
             stars = Math.max(0, stars - lose);
+            saveStars();
             updateStarUI();
             showPanel('<h2>💀 你死了</h2>' +
                 '<div style="color:#ccc;margin-bottom:10px">第 ' + deathCount + ' 次死亡，扣除 ' + lose + ' 颗星 ⭐（剩下 ' + stars + ' 颗）</div>' +
@@ -1646,6 +2003,42 @@
                     ctx.ellipse(cxp, cyp, 85, 20, 0, 0, Math.PI * 2);
                     ctx.ellipse(cxp + 45, cyp + 6, 50, 14, 0, 0, Math.PI * 2);
                     ctx.fill();
+                }
+            }
+
+            // 太阳 / 月亮 + 星星（MC 风格天空）
+            if (dim === "overworld") {
+                var phS = dayPhase();
+                if (phS !== "night") {
+                    // 太阳（带光晕）
+                    var sunX = cx * 0.74, sunY = cy * 0.2;
+                    var sg = ctx.createRadialGradient(sunX, sunY, 6, sunX, sunY, 52);
+                    sg.addColorStop(0, "rgba(255,246,200,0.95)");
+                    sg.addColorStop(0.4, "rgba(255,220,110,0.4)");
+                    sg.addColorStop(1, "rgba(255,200,80,0)");
+                    ctx.fillStyle = sg;
+                    ctx.beginPath(); ctx.arc(sunX, sunY, 52, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = "#fff4b8";
+                    ctx.beginPath(); ctx.arc(sunX, sunY, 17, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    // 星星（固定分布，确定性）
+                    ctx.fillStyle = "rgba(255,255,255,0.9)";
+                    for (var st = 0; st < 70; st++) {
+                        var sx2 = tHash(st * 7 + 3) * cx;
+                        var sy2 = tHash(st * 13 + 5) * cy * 0.55;
+                        var tw = 0.6 + 0.6 * tHash(st * 31 + 9);
+                        ctx.fillRect(sx2, sy2, tw, tw);
+                    }
+                    // 月亮（带光晕）
+                    var mX = cx * 0.75, mY = cy * 0.18;
+                    var mg = ctx.createRadialGradient(mX, mY, 2, mX, mY, 34);
+                    mg.addColorStop(0, "rgba(235,240,250,0.9)");
+                    mg.addColorStop(0.5, "rgba(210,220,240,0.25)");
+                    mg.addColorStop(1, "rgba(200,210,235,0)");
+                    ctx.fillStyle = mg;
+                    ctx.beginPath(); ctx.arc(mX, mY, 34, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = "#eef1f8";
+                    ctx.beginPath(); ctx.arc(mX, mY, 14, 0, Math.PI * 2); ctx.fill();
                 }
             }
 
@@ -1771,8 +2164,9 @@
                         m.atkCd--;
                         if (m.atkCd <= 0) {
                             m.atkCd = 55;
-                            hp -= m.type.dmg;
-                            hudMsg("👹 " + m.type.name + " 咬了你 -" + m.type.dmg + "！");
+                            var mdmg = applyArmor(m.type.dmg);
+                            hp -= mdmg;
+                            hudMsg("👹 " + m.type.name + " 咬了你 -" + mdmg + "！");
                             updateHP();
                             if (hp <= 0) { dead = true; showDeath(); }
                         }
@@ -1971,6 +2365,7 @@
         updateHP();
         updateStarUI();
         updateSwordUI();
+        updateArmorUI();
         frame();
     </script>
 </body>
