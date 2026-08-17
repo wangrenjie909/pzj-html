@@ -400,12 +400,24 @@
         function drawTexFace(pts, texCv, shade, dist) {
             var x0 = pts[0].sx, y0 = pts[0].sy;
             ctx.save();
+            // transform 把单位正方形 (0,0)-(1,1) 映射到四边形 → 纹理必须画到 1×1 单位
             ctx.transform(pts[1].sx - x0, pts[1].sy - y0, pts[3].sx - x0, pts[3].sy - y0, x0, y0);
-            ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(texCv, 0, 0);
+            ctx.imageSmoothingEnabled = false;   // 最近邻放大 → MC 像素颗粒
+            ctx.drawImage(texCv, 0, 0, 1, 1);
             ctx.restore();
             shadeFog(pts, shade, dist);
         }
+        // 纹理平均色（远处 LOD 用纯色替代纹理贴面，大幅省性能）
+        function texAvg(tex) {
+            var r = 0, g = 0, b = 0, n = 0;
+            for (var tv2 = 0; tv2 < 16; tv2++)
+                for (var tu2 = 0; tu2 < 16; tu2++) { r += tex[tv2][tu2][0]; g += tex[tv2][tu2][1]; b += tex[tv2][tu2][2]; n++; }
+            return "rgb(" + Math.round(r / n) + "," + Math.round(g / n) + "," + Math.round(b / n) + ")";
+        }
+        var TOP_AVG = {
+            grass: texAvg(TEX.grass_top), stone: texAvg(TEX.stone),
+            netherrack: texAvg(TEX.netherrack), endstone: texAvg(TEX.endstone), soulsand: texAvg(TEX.soulsand)
+        };
         // 纯色面 + 明暗罩 + 距离雾
         function drawFlatFace(pts, color, shade, dist) {
             ctx.fillStyle = color;
@@ -434,6 +446,24 @@
                 ctx.fillStyle = "rgba(" + fg[0] + "," + fg[1] + "," + fg[2] + "," + (ft * 0.92).toFixed(3) + ")";
                 ctx.fill();
             }
+        }
+        // 面的垂直光照过渡（上亮下暗，网页版 MC 的环境光效果）
+        function faceShadeGrad(pts, maxAlpha) {
+            var minY = 1e9, maxY = -1e9;
+            for (var i = 0; i < 4; i++) {
+                if (pts[i].sy < minY) minY = pts[i].sy;
+                if (pts[i].sy > maxY) maxY = pts[i].sy;
+            }
+            if (maxY - minY < 2) return;
+            var g = ctx.createLinearGradient(0, minY, 0, maxY);
+            g.addColorStop(0, "rgba(0,0,0,0)");
+            g.addColorStop(1, "rgba(0,0,0," + maxAlpha.toFixed(3) + ")");
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].sx, pts[0].sy);
+            for (var q = 1; q < 4; q++) ctx.lineTo(pts[q].sx, pts[q].sy);
+            ctx.closePath();
+            ctx.fill();
         }
 
         // ===== 维度 =====
@@ -489,16 +519,16 @@
 
         // ===== 吃食物补血 =====
         var FOODS = {
-            bread: { name: "面包", heal: 6 },
+            bread: { name: "面包", heal: 5 },
             grass: { name: "草", heal: 1 },
             apple: { name: "苹果", heal: 4 },
-            porkchop: { name: "生猪排", heal: 4 },
-            beef: { name: "生牛肉", heal: 5 },
-            chicken: { name: "生鸡肉", heal: 3 },
-            rotten: { name: "腐肉", heal: 2, poison: true },   // MC 腐肉：有几率中毒
-            cooked_porkchop: { name: "熟猪排", heal: 6 },
+            porkchop: { name: "生猪排", heal: 3 },
+            beef: { name: "生牛肉", heal: 3 },
+            chicken: { name: "生鸡肉", heal: 2 },
+            rotten: { name: "腐肉", heal: 4, poison: true },   // MC 1.8 腐肉：80% 几率中毒
+            cooked_porkchop: { name: "熟猪排", heal: 8 },
             cooked_beef: { name: "熟牛排", heal: 8 },
-            cooked_chicken: { name: "熟鸡肉", heal: 5 }
+            cooked_chicken: { name: "熟鸡肉", heal: 6 }
         };
         function eatFood() {
             if (paused || dead) return true;   // 暂停/死亡：右键不触发别的
@@ -525,7 +555,7 @@
             updateHotbar();
             updateHP();
             hudMsg((auto ? "🍽️ 自动吃了背包里的" : "😋 吃了") + f.name + "，生命 +" + f.heal + "！");
-            if (f.poison && Math.random() < 0.3) {
+            if (f.poison && Math.random() < 0.8) {   // MC 1.8 腐肉 80% 中毒
                 hp = Math.max(0, hp - 2);
                 hudMsg("🤢 腐肉吃坏了肚子！中毒 -2 生命！");
                 updateHP();
@@ -538,21 +568,21 @@
         var TOOLS = {
             sword: [
                 { name: "木剑",   dmg: 4, dur: 60,   blade: "#c49a63", guard: "#8d6e63" },
-                { name: "石剑",   dmg: 5, dur: 131,  blade: "#c8ced4", guard: "#6c757d" },
-                { name: "铁剑",   dmg: 6, dur: 250,  blade: "#d8dee6", guard: "#8a9299" },
-                { name: "钻石剑", dmg: 7, dur: 1560, blade: "#7ee8fa", guard: "#38b6d8" }
+                { name: "石剑",   dmg: 5, dur: 132,  blade: "#c8ced4", guard: "#6c757d" },
+                { name: "铁剑",   dmg: 6, dur: 251,  blade: "#d8dee6", guard: "#8a9299" },
+                { name: "钻石剑", dmg: 7, dur: 1562, blade: "#7ee8fa", guard: "#38b6d8" }
             ],
             axe: [
-                { name: "木斧",   dmg: 7, dur: 60,   blade: "#c49a63", guard: "#8d6e63" },
-                { name: "石斧",   dmg: 9, dur: 131,  blade: "#c8ced4", guard: "#6c757d" },
-                { name: "铁斧",   dmg: 9, dur: 250,  blade: "#d8dee6", guard: "#8a9299" },
-                { name: "钻石斧", dmg: 9, dur: 1560, blade: "#7ee8fa", guard: "#38b6d8" }
+                { name: "木斧",   dmg: 4, dur: 60,   blade: "#c49a63", guard: "#8d6e63" },
+                { name: "石斧",   dmg: 5, dur: 132,  blade: "#c8ced4", guard: "#6c757d" },
+                { name: "铁斧",   dmg: 6, dur: 251,  blade: "#d8dee6", guard: "#8a9299" },
+                { name: "钻石斧", dmg: 7, dur: 1562, blade: "#7ee8fa", guard: "#38b6d8" }
             ],
             pick: [
                 { name: "木镐",   dmg: 3, dur: 60,   blade: "#c49a63", guard: "#8d6e63" },
-                { name: "石镐",   dmg: 4, dur: 131,  blade: "#c8ced4", guard: "#6c757d" },
-                { name: "铁镐",   dmg: 5, dur: 250,  blade: "#d8dee6", guard: "#8a9299" },
-                { name: "钻石镐", dmg: 6, dur: 1560, blade: "#7ee8fa", guard: "#38b6d8" }
+                { name: "石镐",   dmg: 4, dur: 132,  blade: "#c8ced4", guard: "#6c757d" },
+                { name: "铁镐",   dmg: 5, dur: 251,  blade: "#d8dee6", guard: "#8a9299" },
+                { name: "钻石镐", dmg: 6, dur: 1562, blade: "#7ee8fa", guard: "#38b6d8" }
             ]
         };
         var toolKind = "axe";          // axe 斧头 / sword 剑 / pick 镐
@@ -650,26 +680,28 @@
         var MONSTER_TYPES = {
             overworld: [
                 { name: "僵尸", body: "#5c9d4f", head: "#4a8740", hp: 20, dmg: 2 },
-                { name: "骷髅", body: "#e8e8e8", head: "#f0f0f0", hp: 35, dmg: 2 }
+                { name: "骷髅", body: "#e8e8e8", head: "#f0f0f0", hp: 20, dmg: 2 }
             ],
             nether: [
-                { name: "僵尸猪人", body: "#7ecb6a", head: "#5fb34d", hp: 30, dmg: 3 },
-                { name: "恶魂", body: "#f0f0f0", head: "#ffffff", hp: 25, dmg: 3, fly: true },
-                { name: "岩浆怪", body: "#ff5a2a", head: "#e04418", hp: 30, dmg: 3 }
+                { name: "僵尸猪人", body: "#7ecb6a", head: "#5fb34d", hp: 20, dmg: 5 },
+                { name: "恶魂", body: "#f0f0f0", head: "#ffffff", hp: 10, dmg: 6, fly: true },
+                { name: "岩浆怪", body: "#ff5a2a", head: "#e04418", hp: 16, dmg: 4 }
             ],
             end: [
                 { name: "末影人", body: "#1a1a24", head: "#0d0d14", hp: 40, dmg: 4, tall: true },
-                { name: "末影螨", body: "#8a4fb5", head: "#7a3fa0", hp: 15, dmg: 2 }
+                { name: "末影螨", body: "#8a4fb5", head: "#7a3fa0", hp: 8, dmg: 2 }
             ],
             soul: [
-                { name: "怨灵骷髅", body: "#c8d4e8", head: "#a8b8d4", hp: 30, dmg: 3 },
-                { name: "幽灵", body: "#e2e8f5", head: "#d0d8ea", hp: 20, dmg: 2, fly: true }
+                { name: "怨灵骷髅", body: "#c8d4e8", head: "#a8b8d4", hp: 20, dmg: 3 },
+                { name: "幽灵", body: "#e2e8f5", head: "#d0d8ea", hp: 15, dmg: 2, fly: true }
             ]
         };
         var ANIMAL_NAMES = { pig: "猪", sheep: "羊", cow: "牛", chicken: "鸡", villager: "村民" };
         function spawnAnimal() {
             var animalTypes = ["pig", "sheep", "cow", "chicken"];
-            animals.push({ x: (Math.random() * 44) - 22, z: (Math.random() * 44) - 22, dir: Math.random() * Math.PI * 2, type: animalTypes[Math.floor(Math.random() * animalTypes.length)], hp: 20, maxHp: 20 });
+            var tp = animalTypes[Math.floor(Math.random() * animalTypes.length)];
+            var ahp = tp === "chicken" ? 4 : 10;   // MC 1.8：鸡 4 血，猪牛羊 10 血
+            animals.push({ x: (Math.random() * 44) - 22, z: (Math.random() * 44) - 22, dir: Math.random() * Math.PI * 2, type: tp, hp: ahp, maxHp: ahp });
         }
         function spawnMonster() {
             var pool = MONSTER_TYPES[dim] || MONSTER_TYPES.overworld;
@@ -682,7 +714,7 @@
         var bosses = [];
         var projectiles = [];
         function spawnBoss(kind) {
-            var def = kind === "wither" ? { name: "凋零💀", hp: 120, dmg: 5 }
+            var def = kind === "wither" ? { name: "凋零💀", hp: 300, dmg: 5 }
                     : kind === "dragon" ? { name: "末影龙🐉", hp: 200, dmg: 6 }
                     : { name: "幽灵王👑", hp: 80, dmg: 4 };
             bosses.push({ kind: kind, name: def.name, maxHp: def.hp, hp: def.hp, dmg: def.dmg, x: cam.x + 8, z: cam.z + 8, y: 0, atkCd: 0 });
@@ -855,7 +887,7 @@
                     if (pd > 1.7) { g.x += Math.sin(g.dir) * 0.09; g.z += Math.cos(g.dir) * 0.09; }
                     else if (g.atkCd <= 0) {
                         g.atkCd = 40;
-                        var gdmg = applyArmor(6);
+                        var gdmg = applyArmor(10);   // MC 1.8 铁傀儡攻击 7-21，取 10
                         hp -= gdmg;
                         hudMsg("😠 铁傀儡愤怒地一拳打向你！(-" + gdmg + ")");
                         updateHP();
@@ -917,7 +949,9 @@
             }
             var animalTypes = ["pig", "sheep", "cow", "chicken"];
             for (var m = 0; m < 12; m++) {
-                animals.push({ x: (Math.random() * 44) - 22, z: (Math.random() * 44) - 22, dir: Math.random() * Math.PI * 2, type: animalTypes[Math.floor(Math.random() * animalTypes.length)], hp: 20, maxHp: 20 });
+                var tp2 = animalTypes[Math.floor(Math.random() * animalTypes.length)];
+                var ahp2 = tp2 === "chicken" ? 4 : 10;   // MC 1.8：鸡 4 血，猪牛羊 10 血
+                animals.push({ x: (Math.random() * 44) - 22, z: (Math.random() * 44) - 22, dir: Math.random() * Math.PI * 2, type: tp2, hp: ahp2, maxHp: ahp2 });
             }
             // 村庄：3 栋房子聚成一个村子 + 1 个铁傀儡守卫（全村一只）
             var vx0 = (Math.random() * 16) - 8, vz0 = (Math.random() * 16) - 8;
@@ -927,10 +961,10 @@
                 buildHouse(hx, hz);
                 // 干草块（干草堆，能做面包）
                 blocks.push({ x: hx + 1.6, y: gH(hx, hz) + 0.5, z: hz - 2.2, w: 1, h: 1, d: 1, top: "#f2c94c", side: "#d4a017", type: "hay" });
-                animals.push({ x: hx, z: hz + 2.4, dir: Math.PI, type: "villager", hp: 30, maxHp: 30, vx: hx, vz: hz });
+                animals.push({ x: hx, z: hz + 2.4, dir: Math.PI, type: "villager", hp: 20, maxHp: 20, vx: hx, vz: hz });
             }
             // 全村只有 1 个铁傀儡，守护村庄中心
-            golems.push({ x: vx0 + 6, z: vz0 + 5, hp: 60, maxHp: 60, vx: vx0 + 6, vz: vz0 + 5, dir: 0, atkCd: 0, angry: false });
+            golems.push({ x: vx0 + 6, z: vz0 + 5, hp: 100, maxHp: 100, vx: vx0 + 6, vz: vz0 + 5, dir: 0, atkCd: 0, angry: false });
         }
 
         // ===== 相机 =====
@@ -981,15 +1015,17 @@
                 var ok = true;
                 for (var v = 0; v < 4; v++) {
                     var p = project(vs[face.idx[v]][0], vs[face.idx[v]][1], vs[face.idx[v]][2]);
-                    if (!p) { ok = false; break; }
+                    if (!p || p.behind) { ok = false; break; }   // 角点在身后 → 跳过该面
                     pts.push(p);
                 }
                 if (!ok) continue;
                 // 有纹理 → 纹理贴面；否则纯色（生物等），统一加明暗 + 雾
                 var cv = null;
                 if (tc2) cv = face.n[1] > 0 ? (tc2.top || tc2.side) : tc2.side;
-                if (cv) drawTexFace(pts, cv, 1 - face.f, dist);
+                if (cv && dist < 42) drawTexFace(pts, cv, 1 - face.f, dist);   // 远处方块纯色省性能
                 else drawFlatFace(pts, face.c, 1 - face.f, dist);
+                // 侧面垂直光照过渡（上亮下暗，仅近处），顶面不加
+                if (face.n[1] === 0 && dist < 20) faceShadeGrad(pts, 0.14);
             }
         }
 
@@ -1430,17 +1466,17 @@
             ctx.closePath();
             ctx.fill();
         }
-        // 投影 4 个 3D 点 → 屏幕四边形（纹理贴面用）
+        // 投影 4 个 3D 点 → 屏幕四边形（纹理贴面用，任一点在身后则返回 null）
         function projPts(p1, p2, p3, p4) {
             var a = project(p1[0], p1[1], p1[2]), b = project(p2[0], p2[1], p2[2]);
             var c = project(p3[0], p3[1], p3[2]), d = project(p4[0], p4[1], p4[2]);
-            if (!a || !b || !c || !d) return null;
+            if (!a || a.behind || !b || b.behind || !c || c.behind || !d || d.behind) return null;
             return [a, b, c, d];
         }
 
         // ===== 地面：方块格地形（立体、可挖、坡是方块阶梯） =====
         function drawGround() {
-            var cell = 4, rng = 72;
+            var cell = 2, rng = 72;   // 2 米一格：斜坡由小块堆叠，更清晰（MC 方块感）
             var gx0 = Math.floor((cam.x - rng) / cell) * cell;
             var gx1 = Math.ceil((cam.x + rng) / cell) * cell;
             var gz0 = Math.floor((cam.z - rng) / cell) * cell;
@@ -1469,32 +1505,36 @@
                     if (holed) {
                         var dh = hh - 2.5;
                         quad4(gx, dh, gz, gx + cell, dh, gz, gx + cell, dh, gz + cell, gx, dh, gz + cell, "#170f0a");
-                        var wpp = projPts([gx, hh, gz], [gx + cell, hh, gz], [gx + cell, dh, gz], [gx, dh, gz]);
-                        if (wpp) drawTexFace(wpp, wallTex, 0.35, dist);
-                        wpp = projPts([gx, hh, gz + cell], [gx + cell, hh, gz + cell], [gx + cell, dh, gz + cell], [gx, dh, gz + cell]);
-                        if (wpp) drawTexFace(wpp, wallTex, 0.35, dist);
-                        wpp = projPts([gx, hh, gz], [gx, hh, gz + cell], [gx, dh, gz + cell], [gx, dh, gz]);
-                        if (wpp) drawTexFace(wpp, wallTex, 0.45, dist);
-                        wpp = projPts([gx + cell, hh, gz], [gx + cell, hh, gz + cell], [gx + cell, dh, gz + cell], [gx + cell, dh, gz]);
-                        if (wpp) drawTexFace(wpp, wallTex, 0.45, dist);
+                        if (dist < 34) {   // 近处坑壁才画纹理，远处省性能
+                            var wpp = projPts([gx, hh, gz], [gx + cell, hh, gz], [gx + cell, dh, gz], [gx, dh, gz]);
+                            if (wpp) drawTexFace(wpp, wallTex, 0.35, dist);
+                            wpp = projPts([gx, hh, gz + cell], [gx + cell, hh, gz + cell], [gx + cell, dh, gz + cell], [gx, dh, gz + cell]);
+                            if (wpp) drawTexFace(wpp, wallTex, 0.35, dist);
+                            wpp = projPts([gx, hh, gz], [gx, hh, gz + cell], [gx, dh, gz + cell], [gx, dh, gz]);
+                            if (wpp) drawTexFace(wpp, wallTex, 0.45, dist);
+                            wpp = projPts([gx + cell, hh, gz], [gx + cell, hh, gz + cell], [gx + cell, dh, gz + cell], [gx + cell, dh, gz]);
+                            if (wpp) drawTexFace(wpp, wallTex, 0.45, dist);
+                        }
                         continue;
                     }
-                    // 顶面（MC 像素纹理，2×2 细分更贴近透视，纹理更细密）
-                    var half = cell / 2;
-                    for (var si2 = 0; si2 < 2; si2++)
-                        for (var sj2 = 0; sj2 < 2; sj2++) {
-                            var ax0 = gx + si2 * half, az0 = gz + sj2 * half;
-                            var tpp = projPts([ax0, hh, az0], [ax0 + half, hh, az0], [ax0 + half, hh, az0 + half], [ax0, hh, az0 + half]);
-                            if (tpp) drawTexFace(tpp, topTex, 0, dist);
-                        }
+                    // 顶面（近处 MC 像素纹理；远处用平均色纯色，省性能）
+                    var topAvg = dim === "nether" ? TOP_AVG.netherrack
+                        : dim === "end" ? TOP_AVG.endstone
+                        : dim === "soul" ? TOP_AVG.soulsand
+                        : (bm === "mountain" ? TOP_AVG.stone : TOP_AVG.grass);
+                    var tpp = projPts([gx, hh, gz], [gx + cell, hh, gz], [gx + cell, hh, gz + cell], [gx, hh, gz + cell]);
+                    if (tpp) {
+                        if (dist < 34) drawTexFace(tpp, topTex, 0, dist);
+                        else drawFlatFace(tpp, topAvg, 0, dist);
+                    }
                     // 草地上长小草（一簇簇，像 MC 的草丛，只有主世界）
-                    if (dim === "overworld" && bm !== "mountain" && Math.abs((gx * 17 + gz * 29) % 5) < 4) {
+                    if (dim === "overworld" && bm !== "mountain" && Math.abs((gx * 17 + gz * 29) % 5) < 3) {
                         var cl = 2 + Math.abs((gx * 3 + gz * 7) % 3);
                         for (var t = 0; t < cl; t++) {
                             var ox = gx + ((Math.abs((gx * 11 + gz * 5 + t * 13) % 97) / 97) * 0.85 + 0.08) * cell;
                             var oz = gz + ((Math.abs((gx * 5 + gz * 11 + t * 7) % 89) / 89) * 0.85 + 0.08) * cell;
                             var pc = project(ox, hh + 0.02, oz);
-                            if (pc && !pc.behind && pc.z < 55) {
+                            if (pc && !pc.behind && pc.z < 26) {
                                 ctx.strokeStyle = "#2f6b23";
                                 ctx.lineWidth = 1.6;
                                 ctx.beginPath();
@@ -1508,18 +1548,20 @@
                             }
                         }
                     }
-                    // 落差侧壁：邻居更低时露出草皮/泥土壁（MC 像素纹理 + 明暗）
-                    var hL = gH(gx - cell / 2, gz + cell / 2);
-                    var hR = gH(gx + cell + cell / 2, gz + cell / 2);
-                    var hB = gH(gx + cell / 2, gz - cell / 2);
-                    var hF = gH(gx + cell / 2, gz + cell + cell / 2);
-                    var w1, w2, w3, w4;
-                    if (hL < hh - 0.05) { w1 = projPts([gx, hh, gz], [gx, hh, gz + cell], [gx, hL, gz + cell], [gx, hL, gz]); if (w1) drawTexFace(w1, wallTex, 0.3, dist); }
-                    if (hR < hh - 0.05) { w2 = projPts([gx + cell, hh, gz + cell], [gx + cell, hh, gz], [gx + cell, hR, gz], [gx + cell, hR, gz + cell]); if (w2) drawTexFace(w2, wallTex, 0.3, dist); }
-                    if (hB < hh - 0.05) { w3 = projPts([gx, hh, gz], [gx + cell, hh, gz], [gx + cell, hB, gz], [gx, hB, gz]); if (w3) drawTexFace(w3, wallTex, 0.3, dist); }
-                    if (hF < hh - 0.05) { w4 = projPts([gx + cell, hh, gz + cell], [gx, hh, gz + cell], [gx, hF, gz + cell], [gx + cell, hF, gz + cell]); if (w4) drawTexFace(w4, wallTex, 0.3, dist); }
-                    // 点缀小花
-                    if (Math.abs((gx * 31 + gz * 17) % 23) < 3) {
+                    // 落差侧壁：邻居更低时露出草皮/泥土壁（仅近处画，省性能）
+                    if (dist < 30) {
+                        var hL = gH(gx - cell / 2, gz + cell / 2);
+                        var hR = gH(gx + cell + cell / 2, gz + cell / 2);
+                        var hB = gH(gx + cell / 2, gz - cell / 2);
+                        var hF = gH(gx + cell / 2, gz + cell + cell / 2);
+                        var w1, w2, w3, w4;
+                        if (hL < hh - 0.05) { w1 = projPts([gx, hh, gz], [gx, hh, gz + cell], [gx, hL, gz + cell], [gx, hL, gz]); if (w1) drawTexFace(w1, wallTex, 0.3, dist); }
+                        if (hR < hh - 0.05) { w2 = projPts([gx + cell, hh, gz + cell], [gx + cell, hh, gz], [gx + cell, hR, gz], [gx + cell, hR, gz + cell]); if (w2) drawTexFace(w2, wallTex, 0.3, dist); }
+                        if (hB < hh - 0.05) { w3 = projPts([gx, hh, gz], [gx + cell, hh, gz], [gx + cell, hB, gz], [gx, hB, gz]); if (w3) drawTexFace(w3, wallTex, 0.3, dist); }
+                        if (hF < hh - 0.05) { w4 = projPts([gx + cell, hh, gz + cell], [gx, hh, gz + cell], [gx, hF, gz + cell], [gx + cell, hF, gz + cell]); if (w4) drawTexFace(w4, wallTex, 0.3, dist); }
+                    }
+                    // 点缀小花（仅近处）
+                    if (dist < 26 && Math.abs((gx * 31 + gz * 17) % 29) < 2) {
                         var fc = ["#ff6b6b", "#ffd43b", "#fff3bf"][Math.abs(gx * 3 + gz) % 3];
                         var pc = project(gx + cell / 2, hh + 0.05, gz + cell / 2);
                         if (pc && !pc.behind) {
@@ -1633,7 +1675,7 @@
                     return;
                 }
             }
-            var cellX = Math.round(gh.x / 4) * 4, cellZ = Math.round(gh.z / 4) * 4;
+            var cellX = Math.round(gh.x / 2) * 2, cellZ = Math.round(gh.z / 2) * 2;
             var dup = false;
             for (var h2 = 0; h2 < holes.length; h2++) {
                 if (holes[h2].x === cellX && holes[h2].z === cellZ) { dup = true; break; }
@@ -1641,8 +1683,8 @@
             if (dup) { hudMsg("🕳️ 这里已经挖过了～"); return; }
             holes.push({ x: cellX, z: cellZ });
             bag.grass++; bag.dirt++;
-            spawnDrop(cellX + 4, cellZ + 4, "grass", 2);
-            spawnDrop(cellX + 4, cellZ + 4, "dirt", 2);
+            spawnDrop(cellX + 2, cellZ + 2, "grass", 2);
+            spawnDrop(cellX + 2, cellZ + 2, "dirt", 2);
             updateHotbar();
             hudMsg("⛏️ 挖开地面！草×1、泥土×1，留了个大坑 🕳️");
         }
@@ -1993,16 +2035,19 @@
             ctx.fillStyle = sky;
             ctx.fillRect(0, 0, cx, cy);
 
-            // 云（主世界天空的云，缓慢飘动）
+            // 云（MC 风格方块云，缓慢飘动）
             if (dim === "overworld") {
-                ctx.fillStyle = "rgba(255,255,255,0.7)";
                 for (var ci = 0; ci < 5; ci++) {
-                    var cxp = ((cx + ci * 260 + performance.now() * 0.004) % (cx + 500)) - 250;
-                    var cyp = 70 + (ci % 3) * 55;
-                    ctx.beginPath();
-                    ctx.ellipse(cxp, cyp, 85, 20, 0, 0, Math.PI * 2);
-                    ctx.ellipse(cxp + 45, cyp + 6, 50, 14, 0, 0, Math.PI * 2);
-                    ctx.fill();
+                    var cxp = ((cx + ci * 300 + performance.now() * 0.004) % (cx + 620)) - 310;
+                    var cyp = 62 + (ci % 3) * 50;
+                    // 每朵云由 3 层白色方块组成（MC 的方块云），底部带浅灰
+                    var w1 = 96 + (ci % 2) * 24, h1 = 16;
+                    ctx.fillStyle = "rgba(255,255,255,0.9)";
+                    ctx.fillRect(cxp - w1, cyp, w1 * 2, h1);
+                    ctx.fillRect(cxp - w1 * 0.45, cyp - 10, w1 * 0.9, h1);
+                    ctx.fillRect(cxp - w1 * 0.85, cyp + 8, w1 * 1.7, h1);
+                    ctx.fillStyle = "rgba(196,202,220,0.6)";
+                    ctx.fillRect(cxp - w1 * 0.85, cyp + 20, w1 * 1.7, 6);
                 }
             }
 
@@ -2198,6 +2243,26 @@
             }
 
             drawGround();
+
+            // 方块地面软阴影（贴地方块投影，限制尺寸防遮挡屏幕）
+            if (dim !== "end") {   // 末地是浮空岛，不画投影
+                var fSh = cx * 0.9;
+                ctx.fillStyle = "rgba(0,0,0,0.22)";
+                for (var bi2 = 0; bi2 < blocks.length; bi2++) {
+                    var bl2 = blocks[bi2];
+                    var gyb = gH(bl2.x, bl2.z);
+                    if (Math.abs((bl2.y - bl2.h / 2) - gyb) < 0.6) {   // 直接贴地的方块
+                        var pj = project(bl2.x, gyb + 0.04, bl2.z);
+                        if (pj && !pj.behind && pj.z > 1.3 && pj.z < 28) {
+                            var rx2 = Math.min(bl2.w * 0.58 * fSh / pj.z, 40);   // 半径上限防巨大黑斑
+                            var ry2 = Math.min(bl2.d * 0.3 * fSh / pj.z, 20);
+                            ctx.beginPath();
+                            ctx.ellipse(pj.sx, pj.sy, rx2, ry2, 0, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
 
             var items = [];
             for (var b = 0; b < blocks.length; b++) {
