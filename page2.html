@@ -252,7 +252,7 @@
 </head>
 <body>
     <h1>🛫 飞行棋 · 冒险小游戏</h1>
-    <p class="welcome">4 人飞行棋：蓝🔵黄🟡红🔴绿🟢 四家轮流，掷 6 起飞、撞飞对手，先全到家者胜！</p>
+    <p class="welcome">你和 3 个 AI 的飞行棋对战：你是 🔵蓝方，黄🟡红🔴绿🟢 由 AI 自动玩，掷 6 起飞、撞飞对手，先全到家者胜！</p>
 
     <div class="game-area">
         <!-- ===== 飞行棋区 ===== -->
@@ -277,8 +277,9 @@
                     <button class="btn-reset" id="ludoReset" onclick="resetLudo()">🔄 重新开始</button>
                     <div class="rules">
                         📖 <b>标准规则</b><br>
+                        · 你是 <b>🔵蓝方</b>，黄🟡红🔴绿🟢 是 <b>AI 对手</b>（自动玩）<br>
                         · 每方 4 个棋子，掷到 <b>1 或 6</b> 都能起飞<br>
-                        · 蓝🔵 → 黄🟡 → 红🔴 → 绿🟢 <b>轮流</b>掷骰子，掷完点骰子交给下家<br>
+                        · 蓝🔵 → 黄🟡 → 红🔴 → 绿🟢 <b>轮流</b>掷骰子；<b>AI 回合会自动掷</b>，你只需管自己的回合<br>
                         · 掷到 <b>1 或 6</b>：有停机坪棋子 → <b>起飞</b>（不走步数）；全飞出去了 → 才能走步<br>
                         · 只有掷到 <b>6</b> 能<b>再掷一次</b>（最多连掷 3 次）<br>
                         · 踩到<b>自己颜色</b>的格子 → 跳 4 格<br>
@@ -623,8 +624,12 @@
         }
 
         // ===== 掷骰（4 人本地轮流） =====
-        function rollLudo() {
+        function rollLudo(ai) {
             if (moving || winner !== null) return;
+            if (!ai && turn !== 0) {   // 玩家点击：AI 回合拦截
+                ludoMsg("🤖 现在是 " + PLAYERS[turn].emoji + PLAYERS[turn].name + " AI 回合，等它走完～");
+                return;
+            }
             moving = true;
             var n = roll();
             setDice(document.getElementById("ludoCube"), n);
@@ -632,7 +637,7 @@
             diceCount++;
             updateUI();
             var pl = PLAYERS[turn];
-            ludoMsg(pl.emoji + " " + pl.name + "方掷出了 " + n + " 点！");
+            ludoMsg(pl.emoji + " " + pl.name + (turn === 0 ? "方" : " AI") + "掷出了 " + n + " 点！");
             setTimeout(function () { curRoll(n); }, 1000);
         }
 
@@ -643,22 +648,55 @@
                 var idx = firstHome(who);
                 pl.pos[idx] = 0;
                 redrawBoards();
-                ludoMsg("🛫 " + pl.emoji + pl.name + "方掷到 " + n + "！棋子 " + (idx + 1) + " 起飞了！（只起飞，不走 " + n + " 步）");
+                ludoMsg("🛫 " + pl.emoji + pl.name + (who === 0 ? "方" : " AI") + "掷到 " + n + "！棋子 " + (idx + 1) + " 起飞了！（只起飞，不走 " + n + " 步）");
                 afterLand(who, n);
                 return;
             }
             var list = movable(who);
             if (list.length === 0) {
-                ludoMsg("😅 " + pl.emoji + pl.name + "方没有棋子能走，过！");
+                ludoMsg("😅 " + pl.emoji + pl.name + (who === 0 ? "方" : " AI") + "没有棋子能走，过！");
                 moving = false;
                 nextTurn();
                 return;
             }
             if (list.length === 1) { movePiece(who, list[0], n); return; }
-            // 多个可动 → 点击棋子或按数字键选择
-            awaitingPick = true;
-            pendingSteps = n;
-            ludoMsg("👆 " + pl.emoji + pl.name + "方：点击金色棋子 或 按 1-" + list.length + " 选择要走的棋子");
+            if (turn === 0) {
+                // 玩家：多个可动 → 点击棋子或按数字键选择
+                awaitingPick = true;
+                pendingSteps = n;
+                ludoMsg("👆 " + pl.emoji + pl.name + "方：点击金色棋子 或 按 1-" + list.length + " 选择要走的棋子");
+            } else {
+                // AI：自动选最好的棋子走
+                var idx = aiChoose(who, list, n);
+                ludoMsg("🤖 " + pl.emoji + pl.name + " AI 选择走棋子 " + (idx + 1));
+                setTimeout(function () { movePiece(who, idx, n); }, 500);
+            }
+        }
+
+        // AI 选棋子策略：优先到家 > 撞飞对手 > 跳格 > 走最远的棋子
+        function aiChoose(who, list, n) {
+            var pl = PLAYERS[who], best = list[0], score = -1e9;
+            for (var i = 0; i < list.length; i++) {
+                var idx = list[i];
+                var np = pl.pos[idx] + n;
+                if (np > pl.goalEnd) np = 2 * pl.goalEnd - np;   // 超过终点弹回
+                var s = 0;
+                if (np === pl.goalEnd) s += 100;                 // 到家
+                if (np < 40) {
+                    if (jump(who, np) !== np) s += 30;           // 踩自己颜色跳格
+                    var ls = (np + pl.start) % RUN;
+                    for (var w = 0; w < 4; w++) {                // 能撞飞对手
+                        if (w === who) continue;
+                        for (var j2 = 0; j2 < 4; j2++) {
+                            var op = PLAYERS[w].pos[j2];
+                            if (op >= 0 && op < 40 && (op + PLAYERS[w].start) % RUN === ls) s += 40;
+                        }
+                    }
+                }
+                s += pl.pos[idx];                                // 走最远的优先
+                if (s > score) { score = s; best = idx; }
+            }
+            return best;
         }
 
         function movePiece(who, idx, n) {
@@ -698,7 +736,8 @@
             if (n === 6 && sixStreak < 3) {
                 sixStreak++;
                 moving = false;
-                ludoMsg("🎉 掷到 6！" + pl.emoji + pl.name + "方可以再掷一次！");
+                ludoMsg("🎉 掷到 6！" + pl.emoji + pl.name + (who === 0 ? "方可以再掷一次！" : " AI 再掷一次！"));
+                if (who !== 0) setTimeout(function () { rollLudo(true); }, 900);   // AI 自动连掷
                 return;
             }
             sixStreak = 0;
@@ -708,7 +747,12 @@
         function nextTurn() {
             moving = false;
             turn = (turn + 1) % 4;
-            ludoMsg("轮到 " + PLAYERS[turn].emoji + PLAYERS[turn].name + "方掷骰子了！点骰子 🎲");
+            if (turn === 0) {
+                ludoMsg("轮到你（🔵 蓝方）掷骰子了！点骰子 🎲");
+            } else {
+                ludoMsg("🤖 " + PLAYERS[turn].emoji + PLAYERS[turn].name + " AI 正在思考……");
+                setTimeout(function () { rollLudo(true); }, 900);   // AI 自动掷骰
+            }
         }
 
         // ===== 点击棋盘选棋子（当前回合方） =====
@@ -749,7 +793,7 @@
             turn = 0; winner = null; moving = false; sixStreak = 0;
             awaitingPick = false; pendingSteps = 0;
             document.getElementById("ludoReset").style.display = "none";
-            ludoMsg("新的 4 人飞行棋！🔵 蓝方先掷 6 起飞 🎲");
+            ludoMsg("新的对局！你是 🔵蓝方，对战 3 个 AI 🤖 先掷 6 起飞 🎲");
             redrawBoards();
         }
 
@@ -967,7 +1011,7 @@
         document.getElementById("hiscoreNum").textContent = hiscore;
         updateFightUI();
         redrawBoards();
-        ludoMsg("掷 6 起飞！该你掷骰子了 🎲");
+        ludoMsg("你是 🔵蓝方，和 3 个 AI 对战！点骰子，掷 6 起飞 🎲");
     </script>
 </body>
 </html>

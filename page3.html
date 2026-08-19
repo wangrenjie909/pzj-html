@@ -279,6 +279,11 @@
             cooked_porkchop: { name: "熟猪排", icon: "🥓", top: "#e8a88a", side: "#c97e5e", h: 30 },
             cooked_beef: { name: "熟牛排", icon: "🥩", top: "#b05c4a", side: "#8a4030", h: 30 },
             cooked_chicken: { name: "熟鸡肉", icon: "🍗", top: "#e8b98a", side: "#c9965e", h: 30 },
+            scrap: { name: "下界合金碎片", icon: "🪨", top: "#6e5a50", side: "#55443c", h: 30 },
+            gold:  { name: "金锭",    icon: "🪙", top: "#fcd43f", side: "#d4a017", h: 40 },
+            netherite: { name: "下界合金锭", icon: "🔱", top: "#6e5a50", side: "#55443c", h: 40 },
+            netherite_block: { name: "下界合金块", icon: "⬛", top: "#4a3a33", side: "#3a2c26", h: 50 },
+            debris: { name: "远古残骸", icon: "🪨", top: "#4a3a33", side: "#3a2c26", h: 50 },
             torch: { name: "火把",    icon: "🔥", top: "#c49a63", side: "#8d6e63", h: 60 },
             craft: { name: "工作台",  icon: "🛠️", top: "#e0b98a", side: "#a37b4a", h: 46 }
         };
@@ -293,76 +298,121 @@
         function clamp255(v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
         function makeTex(gen) {
             var a = [];
-            for (var tv = 0; tv < 16; tv++) { var row = []; for (var tu = 0; tu < 16; tu++) row.push(gen(tu, tv)); a.push(row); }
+            for (var tv = 0; tv < 32; tv++) { var row = []; for (var tu = 0; tu < 32; tu++) row.push(gen(tu, tv)); a.push(row); }   // 32×32 高清晰纹理
             return a;
         }
         var TEX = {};
-        TEX.dirt = makeTex(function (u, v) { var n = tnz(u, v, 11), d = (n - 0.5) * 26; return [clamp255(134 + d), clamp255(96 + d), clamp255(67 + d)]; });
-        TEX.stone = makeTex(function (u, v) { var n = tnz(u, v, 23), d = (n - 0.5) * 42; return [clamp255(126 + d), clamp255(126 + d), clamp255(126 + d)]; });
-        TEX.grass_top = makeTex(function (u, v) { var n = tnz(u, v, 37), d = (n - 0.5) * 34; return [clamp255(106 + d * 0.6), clamp255(170 + d), clamp255(64 + d * 0.4)]; });
+        // ===== 全部按 MC 1.8.8 原版配色 =====
+        // 泥土 #966C4A
+        TEX.dirt = makeTex(function (u, v) { var n = tnz(u, v, 11), d = (n - 0.5) * 26; return [clamp255(150 + d), clamp255(108 + d), clamp255(74 + d)]; });
+        // 石头 #999999
+        TEX.stone = makeTex(function (u, v) { var n = tnz(u, v, 23), d = (n - 0.5) * 40; return [clamp255(153 + d), clamp255(153 + d), clamp255(153 + d)]; });
+        // 草顶 #7cbd4b（深浅大斑块，地面更真实）
+        TEX.grass_top = makeTex(function (u, v) {
+            var n = tnz(u, v, 37), d = (n - 0.5) * 30;
+            var patch = ((Math.floor(u / 16) + Math.floor(v / 16)) % 2 === 0) ? 0 : 10;   // 2×2 大斑块
+            return [clamp255(124 + d * 0.5 + patch), clamp255(189 + d + patch), clamp255(75 + d * 0.35 + patch * 0.5)];
+        });
+        // 草侧：上 8 行草皮 #7cbd4b（边缘自然垂落）+ 下泥土
         TEX.grass_side = makeTex(function (u, v) {
-            if (v < 4) { var n = tnz(u, v, 41), d = (n - 0.5) * 30; return [clamp255(100 + d), clamp255(165 + d), clamp255(60 + d * 0.5)]; }
-            var m = tnz(u, v, 43), e = (m - 0.5) * 24; return [clamp255(134 + e), clamp255(96 + e), clamp255(67 + e)];
+            if (v < 8) { var n = tnz(u, v, 41), d = (n - 0.5) * 26; var edge = v === 7 ? -12 : 0; return [clamp255(122 + d * 0.5 + edge), clamp255(187 + d + edge), clamp255(73 + d * 0.35 + edge * 0.5)]; }
+            var m = tnz(u, v, 43), e = (m - 0.5) * 24; return [clamp255(150 + e), clamp255(108 + e), clamp255(74 + e)];
         });
-        TEX.tree_side = makeTex(function (u, v) { var n = tnz(u, v, 53), d = (n - 0.5) * 30; return [clamp255(101 + d), clamp255(67 + d), clamp255(33 + d)]; });
+        // 橡木原木 #6b4d2f
+        TEX.tree_side = makeTex(function (u, v) { var n = tnz(u, v, 53), d = (n - 0.5) * 30; return [clamp255(107 + d), clamp255(77 + d), clamp255(47 + d)]; });
+        // 树顶年轮
         TEX.tree_top = makeTex(function (u, v) {
-            var dx = u - 7.5, dy = v - 7.5, r = Math.sqrt(dx * dx + dy * dy);
-            var ring = (Math.floor(r) % 2 === 0) ? 150 : 110;
-            var n = tnz(u, v, 59), d = (n - 0.5) * 18;
-            return [clamp255(ring + d), clamp255(ring * 0.68 + d), clamp255(ring * 0.35 + d)];
+            var dx = u - 15.5, dy = v - 15.5, r = Math.sqrt(dx * dx + dy * dy);
+            var ring = (Math.floor(r / 3) % 2 === 0) ? 156 : 107;
+            var n = tnz(u, v, 59), d = (n - 0.5) * 16;
+            return [clamp255(ring + d), clamp255(ring * 0.74 + d), clamp255(ring * 0.45 + d)];
         });
-        TEX.leaf = makeTex(function (u, v) { var n = tnz(u, v, 61), d = (n - 0.5) * 46; return [clamp255(64 + d * 0.6), clamp255(142 + d), clamp255(48 + d * 0.3)]; });
-        TEX.gem = makeTex(function (u, v) { var n = tnz(u, v, 67); var c = n > 0.82 ? 30 : (n > 0.5 ? 6 : -8); return [clamp255(86 + c), clamp255(210 + c), clamp255(224 + c)]; });
-        TEX.plank = makeTex(function (u, v) { var n = tnz(u, v, 71), d = (n - 0.5) * 26; var strip = (v % 4 < 2) ? 6 : -4; return [clamp255(162 + d + strip), clamp255(125 + d + strip), clamp255(82 + d + strip * 0.6)]; });
+        // 树叶 #3d7d2c（深浅两层，更立体）
+        TEX.leaf = makeTex(function (u, v) {
+            var n = tnz(u, v, 61), d = (n - 0.5) * 34;
+            var layer = ((Math.floor(u / 8) + Math.floor(v / 8)) % 2 === 0) ? 0 : -14;   // 2×2 区块深浅交错
+            return [clamp255(63 + d * 0.5 + layer), clamp255(127 + d + layer), clamp255(45 + d * 0.3 + layer * 0.5)];
+        });
+        // 钻石块 #4aedd9
+        TEX.gem = makeTex(function (u, v) { var n = tnz(u, v, 67); var c = n > 0.82 ? 28 : (n > 0.5 ? 6 : -8); return [clamp255(74 + c), clamp255(237 + c * 0.6), clamp255(217 + c * 0.6)]; });
+        // 木板 #b8945f
+        TEX.plank = makeTex(function (u, v) { var n = tnz(u, v, 71), d = (n - 0.5) * 26; var strip = (v % 8 < 4) ? 6 : -4; return [clamp255(184 + d + strip), clamp255(148 + d + strip * 0.8), clamp255(95 + d + strip * 0.5)]; });
+        // 石砖 #7a7a7a
         TEX.brick = makeTex(function (u, v) {
-            var row = Math.floor(v / 4), off = (row % 2) * 4;
-            if ((v % 4) >= 3 || (u + off) % 4 >= 3) return [92, 92, 92];
-            var n = tnz(u, v, 73), d = (n - 0.5) * 24;
-            return [clamp255(132 + d), clamp255(132 + d), clamp255(132 + d)];
+            var row = Math.floor(v / 8), off = (row % 2) * 8;
+            if ((v % 8) >= 7 || (u + off) % 8 >= 7) return [90, 90, 90];
+            var n = tnz(u, v, 73), d = (n - 0.5) * 22;
+            return [clamp255(122 + d), clamp255(122 + d), clamp255(122 + d)];
         });
-        TEX.hay = makeTex(function (u, v) { var n = tnz(u, v, 79), d = (n - 0.5) * 24; var strip = (v % 4 < 2) ? 10 : -8; return [clamp255(198 + d + strip), clamp255(164 + d + strip * 0.7), clamp255(58 + d * 0.4 + strip * 0.3)]; });
-        TEX.craft_top = makeTex(function (u, v) { var n = tnz(u, v, 83), d = (n - 0.5) * 22; if ((u >= 6 && u <= 9) || (v >= 6 && v <= 9)) return [86, 58, 34]; return [clamp255(168 + d), clamp255(132 + d), clamp255(88 + d)]; });
-        TEX.craft_side = makeTex(function (u, v) { var n = tnz(u, v, 85), d = (n - 0.5) * 22; return [clamp255(158 + d), clamp255(122 + d), clamp255(80 + d)]; });
-        TEX.bread = makeTex(function (u, v) { var n = tnz(u, v, 89), d = (n - 0.5) * 30; return [clamp255(204 + d), clamp255(152 + d), clamp255(76 + d * 0.6)]; });
-        TEX.apple = makeTex(function (u, v) { var n = tnz(u, v, 97), d = (n - 0.5) * 30; if (u < 3 && v < 3) return [80, 140, 60]; return [clamp255(200 + d), clamp255(60 + d * 0.4), clamp255(50 + d * 0.4)]; });
-        TEX.netherrack = makeTex(function (u, v) { var n = tnz(u, v, 101), d = (n - 0.5) * 44; return [clamp255(122 + d), clamp255(52 + d * 0.5), clamp255(42 + d * 0.3)]; });
-        TEX.endstone = makeTex(function (u, v) { var n = tnz(u, v, 103), d = (n - 0.5) * 30; return [clamp255(218 + d), clamp255(210 + d), clamp255(160 + d)]; });
-        TEX.soulsand = makeTex(function (u, v) { var n = tnz(u, v, 107), d = (n - 0.5) * 26; return [clamp255(112 + d), clamp255(102 + d), clamp255(88 + d)]; });
-        // 生物掉落物（MC 风格）
-        TEX.porkchop = makeTex(function (u, v) { var n = tnz(u, v, 111), d = (n - 0.5) * 30; return [clamp255(235 + d), clamp255(150 + d), clamp255(150 + d * 0.5)]; });
-        TEX.beef = makeTex(function (u, v) { var n = tnz(u, v, 113), d = (n - 0.5) * 28; return [clamp255(215 + d), clamp255(88 + d * 0.5), clamp255(88 + d * 0.5)]; });
-        TEX.chicken = makeTex(function (u, v) { var n = tnz(u, v, 115), d = (n - 0.5) * 26; return [clamp255(238 + d), clamp255(200 + d * 0.6), clamp255(150 + d * 0.5)]; });
-        TEX.wool = makeTex(function (u, v) { var n = tnz(u, v, 117), d = (n - 0.5) * 14; return [clamp255(248 + d), clamp255(248 + d), clamp255(240 + d)]; });
-        TEX.emerald = makeTex(function (u, v) { var n = tnz(u, v, 119), d = (n - 0.5) * 20; var c = n > 0.8 ? 30 : 0; return [clamp255(70 + c), clamp255(200 + d + c), clamp255(90 + c)]; });
-        TEX.rotten = makeTex(function (u, v) { var n = tnz(u, v, 121), d = (n - 0.5) * 30; return [clamp255(130 + d), clamp255(160 + d * 0.6), clamp255(90 + d * 0.4)]; });
-        TEX.bone = makeTex(function (u, v) { var n = tnz(u, v, 123), d = (n - 0.5) * 22; return [clamp255(240 + d), clamp255(232 + d), clamp255(205 + d)]; });
-        TEX.pearl = makeTex(function (u, v) { var n = tnz(u, v, 125), d = (n - 0.5) * 24; var c = n > 0.75 ? 40 : 0; return [clamp255(170 + d * 0.4 + c), clamp255(90 + d * 0.3 + c * 0.5), clamp255(200 + d + c)]; });
-        TEX.star = makeTex(function (u, v) { var n = tnz(u, v, 127), d = (n - 0.5) * 24; return [clamp255(250 + d), clamp255(215 + d * 0.6), clamp255(60 + d * 0.3)]; });
-        TEX.egg = makeTex(function (u, v) { var n = tnz(u, v, 129), d = (n - 0.5) * 20; return [clamp255(216 + d), clamp255(196 + d), clamp255(165 + d)]; });
+        // 干草块 #a8903a
+        TEX.hay = makeTex(function (u, v) { var n = tnz(u, v, 79), d = (n - 0.5) * 22; var strip = (v % 8 < 4) ? 8 : -6; return [clamp255(168 + d + strip), clamp255(144 + d + strip * 0.7), clamp255(58 + d * 0.4 + strip * 0.3)]; });
+        // 工作台顶 #8f7748（十字工具）
+        TEX.craft_top = makeTex(function (u, v) { var n = tnz(u, v, 83), d = (n - 0.5) * 20; if ((u >= 13 && u <= 18) || (v >= 13 && v <= 18)) return [70, 52, 30]; return [clamp255(143 + d), clamp255(119 + d), clamp255(72 + d)]; });
+        // 工作台侧
+        TEX.craft_side = makeTex(function (u, v) { var n = tnz(u, v, 85), d = (n - 0.5) * 20; return [clamp255(138 + d), clamp255(114 + d), clamp255(68 + d)]; });
+        // 面包
+        TEX.bread = makeTex(function (u, v) { var n = tnz(u, v, 89), d = (n - 0.5) * 28; return [clamp255(216 + d), clamp255(160 + d * 0.7), clamp255(95 + d * 0.5)]; });
+        // 苹果 #e3453c
+        TEX.apple = makeTex(function (u, v) { var n = tnz(u, v, 97), d = (n - 0.5) * 28; if (u < 6 && v < 6) return [78, 130, 50]; return [clamp255(227 + d), clamp255(69 + d * 0.4), clamp255(60 + d * 0.4)]; });
+        // 下界岩 #4f2821
+        TEX.netherrack = makeTex(function (u, v) { var n = tnz(u, v, 101), d = (n - 0.5) * 40; return [clamp255(79 + d), clamp255(40 + d * 0.5), clamp255(33 + d * 0.35)]; });
+        // 末地石 #d9d9c0
+        TEX.endstone = makeTex(function (u, v) { var n = tnz(u, v, 103), d = (n - 0.5) * 26; return [clamp255(217 + d), clamp255(217 + d), clamp255(192 + d * 0.8)]; });
+        // 灵魂沙 #51483c
+        TEX.soulsand = makeTex(function (u, v) { var n = tnz(u, v, 107), d = (n - 0.5) * 24; return [clamp255(81 + d), clamp255(72 + d), clamp255(60 + d)]; });
+        // 生物掉落物（MC 原版配色）
+        TEX.porkchop = makeTex(function (u, v) { var n = tnz(u, v, 111), d = (n - 0.5) * 26; return [clamp255(242 + d), clamp255(163 + d), clamp255(157 + d * 0.6)]; });
+        TEX.beef = makeTex(function (u, v) { var n = tnz(u, v, 113), d = (n - 0.5) * 26; return [clamp255(214 + d), clamp255(94 + d * 0.5), clamp255(74 + d * 0.5)]; });
+        TEX.chicken = makeTex(function (u, v) { var n = tnz(u, v, 115), d = (n - 0.5) * 24; return [clamp255(246 + d), clamp255(199 + d * 0.6), clamp255(142 + d * 0.5)]; });
+        TEX.wool = makeTex(function (u, v) { var n = tnz(u, v, 117), d = (n - 0.5) * 12; return [clamp255(236 + d), clamp255(236 + d), clamp255(236 + d)]; });
+        TEX.emerald = makeTex(function (u, v) { var n = tnz(u, v, 119), d = (n - 0.5) * 18; var c = n > 0.8 ? 26 : 0; return [clamp255(52 + c), clamp255(210 + d + c), clamp255(78 + c)]; });
+        TEX.rotten = makeTex(function (u, v) { var n = tnz(u, v, 121), d = (n - 0.5) * 26; return [clamp255(126 + d), clamp255(138 + d * 0.6), clamp255(74 + d * 0.4)]; });
+        TEX.bone = makeTex(function (u, v) { var n = tnz(u, v, 123), d = (n - 0.5) * 20; return [clamp255(238 + d), clamp255(234 + d), clamp255(218 + d)]; });
+        TEX.pearl = makeTex(function (u, v) { var n = tnz(u, v, 125), d = (n - 0.5) * 22; var c = n > 0.75 ? 36 : 0; return [clamp255(156 + d * 0.4 + c), clamp255(106 + d * 0.3 + c * 0.5), clamp255(184 + d + c)]; });
+        TEX.star = makeTex(function (u, v) { var n = tnz(u, v, 127), d = (n - 0.5) * 22; return [clamp255(252 + d), clamp255(236 + d * 0.5), clamp255(120 + d * 0.3)]; });
+        TEX.egg = makeTex(function (u, v) { var n = tnz(u, v, 129), d = (n - 0.5) * 18; return [clamp255(232 + d), clamp255(228 + d), clamp255(214 + d)]; });
         // 材料与功能方块（MC 合成链）
-        TEX.stick = makeTex(function (u, v) { var n = tnz(u, v, 131), d = (n - 0.5) * 26; return [clamp255(178 + d), clamp255(136 + d), clamp255(78 + d)]; });
-        TEX.iron = makeTex(function (u, v) { var n = tnz(u, v, 133), d = (n - 0.5) * 22; var c = n > 0.8 ? 26 : 0; return [clamp255(210 + d + c), clamp255(214 + d + c), clamp255(222 + d + c)]; });
+        TEX.stick = makeTex(function (u, v) { var n = tnz(u, v, 131), d = (n - 0.5) * 24; return [clamp255(168 + d), clamp255(134 + d), clamp255(82 + d)]; });
+        TEX.iron = makeTex(function (u, v) { var n = tnz(u, v, 133), d = (n - 0.5) * 20; var c = n > 0.8 ? 22 : 0; return [clamp255(216 + d + c), clamp255(216 + d + c), clamp255(216 + d + c)]; });
         TEX.bed = makeTex(function (u, v) {
-            if ((Math.floor(u / 4) + Math.floor(v / 4)) % 2 === 0) return [200, 45, 45];
-            var n = tnz(u, v, 135), d = (n - 0.5) * 16;
-            return [clamp255(238 + d), clamp255(240 + d), clamp255(242 + d)];
+            if ((Math.floor(u / 8) + Math.floor(v / 8)) % 2 === 0) return [199, 62, 62];   // MC 床红
+            var n = tnz(u, v, 135), d = (n - 0.5) * 14;
+            return [clamp255(238 + d), clamp255(238 + d), clamp255(238 + d)];
         });
         TEX.furnace = makeTex(function (u, v) {
-            var n = tnz(u, v, 137), d = (n - 0.5) * 26;
-            if (u >= 5 && u <= 10 && v >= 5 && v <= 10) return [40, 40, 44];   // 熔炉口
-            return [clamp255(120 + d), clamp255(122 + d), clamp255(126 + d)];
+            var n = tnz(u, v, 137), d = (n - 0.5) * 24;
+            if (u >= 11 && u <= 20 && v >= 11 && v <= 20) return [38, 38, 42];   // 熔炉口
+            return [clamp255(128 + d), clamp255(128 + d), clamp255(128 + d)];
         });
-        TEX.cooked_porkchop = makeTex(function (u, v) { var n = tnz(u, v, 139), d = (n - 0.5) * 24; return [clamp255(226 + d), clamp255(150 + d * 0.5), clamp255(110 + d * 0.5)]; });
-        TEX.cooked_beef = makeTex(function (u, v) { var n = tnz(u, v, 141), d = (n - 0.5) * 24; return [clamp255(168 + d), clamp255(84 + d * 0.5), clamp255(64 + d * 0.5)]; });
-        TEX.cooked_chicken = makeTex(function (u, v) { var n = tnz(u, v, 143), d = (n - 0.5) * 24; return [clamp255(226 + d), clamp255(160 + d * 0.5), clamp255(100 + d * 0.5)]; });
+        TEX.cooked_porkchop = makeTex(function (u, v) { var n = tnz(u, v, 139), d = (n - 0.5) * 22; return [clamp255(232 + d), clamp255(160 + d * 0.5), clamp255(118 + d * 0.5)]; });
+        TEX.cooked_beef = makeTex(function (u, v) { var n = tnz(u, v, 141), d = (n - 0.5) * 22; return [clamp255(176 + d), clamp255(92 + d * 0.5), clamp255(70 + d * 0.5)]; });
+        TEX.cooked_chicken = makeTex(function (u, v) { var n = tnz(u, v, 143), d = (n - 0.5) * 22; return [clamp255(234 + d), clamp255(170 + d * 0.5), clamp255(106 + d * 0.5)]; });
+        // ===== 下界合金（MC 1.16 顶级材料） =====
+        TEX.scrap = makeTex(function (u, v) { var n = tnz(u, v, 147), d = (n - 0.5) * 24; return [clamp255(110 + d), clamp255(90 + d), clamp255(80 + d)]; });
+        TEX.gold = makeTex(function (u, v) { var n = tnz(u, v, 149), d = (n - 0.5) * 20; var c = n > 0.8 ? 26 : 0; return [clamp255(252 + d + c), clamp255(212 + d * 0.6 + c), clamp255(63 + d * 0.3)]; });
+        TEX.netherite = makeTex(function (u, v) {
+            var n = tnz(u, v, 151), d = (n - 0.5) * 22;
+            if (tnz(u, v, 153) > 0.85) return [168, 134, 58];   // 金纹
+            return [clamp255(84 + d), clamp255(70 + d), clamp255(60 + d)];
+        });
+        TEX.netherite_block = makeTex(function (u, v) {
+            var n = tnz(u, v, 155), d = (n - 0.5) * 20;
+            if (tnz(u, v, 157) > 0.88) return [172, 138, 60];   // 金点
+            return [clamp255(74 + d), clamp255(58 + d), clamp255(50 + d)];
+        });
+        TEX.debris = makeTex(function (u, v) {
+            var n = tnz(u, v, 159), d = (n - 0.5) * 26;
+            if (tnz(u, v, 161) > 0.8) return [130, 92, 60];   // 棕斑
+            return [clamp255(60 + d), clamp255(46 + d), clamp255(40 + d)];
+        });
 
         // 纹理 → canvas（放大时关闭平滑，保留 MC 像素颗粒感）
         function texCanvas(tex) {
             var c = document.createElement("canvas");
-            c.width = 16; c.height = 16;
+            c.width = 32; c.height = 32;
             var c2 = c.getContext("2d");
-            for (var tv = 0; tv < 16; tv++)
-                for (var tu = 0; tu < 16; tu++) {
+            for (var tv = 0; tv < 32; tv++)
+                for (var tu = 0; tu < 32; tu++) {
                     var p = tex[tv][tu];
                     c2.fillStyle = "rgb(" + p[0] + "," + p[1] + "," + p[2] + ")";
                     c2.fillRect(tu, tv, 1, 1);
@@ -383,7 +433,8 @@
                 emerald: TEX.emerald, rotten: TEX.rotten, bone: TEX.bone, pearl: TEX.pearl,
                 star: TEX.star, egg: TEX.egg,
                 stick: TEX.stick, iron: TEX.iron, bed: TEX.bed, furnace: TEX.furnace,
-                cooked_porkchop: TEX.cooked_porkchop, cooked_beef: TEX.cooked_beef, cooked_chicken: TEX.cooked_chicken
+                cooked_porkchop: TEX.cooked_porkchop, cooked_beef: TEX.cooked_beef, cooked_chicken: TEX.cooked_chicken,
+                scrap: TEX.scrap, gold: TEX.gold, netherite: TEX.netherite, netherite_block: TEX.netherite_block, debris: TEX.debris
             };
             for (var k in map) {
                 var v = map[k];
@@ -394,7 +445,7 @@
 
         // 各维度的雾色（MC 风格距离雾）
         var FOG = { overworld: [196, 232, 250], nether: [84, 26, 14], end: [24, 16, 44], soul: [64, 78, 100] };
-        function fogT(dist) { return Math.max(0, Math.min(1, (dist - 38) / 55)); }
+        function fogT(dist) { var t = Math.max(0, Math.min(1, (dist - 45) / 50)); return t * t * (3 - 2 * t); }   // 雾从 45 米开始，近处更清晰
 
         // 在投影四边形上画纹理（仿射近似）+ 明暗罩 + 距离雾
         function drawTexFace(pts, texCv, shade, dist) {
@@ -410,8 +461,8 @@
         // 纹理平均色（远处 LOD 用纯色替代纹理贴面，大幅省性能）
         function texAvg(tex) {
             var r = 0, g = 0, b = 0, n = 0;
-            for (var tv2 = 0; tv2 < 16; tv2++)
-                for (var tu2 = 0; tu2 < 16; tu2++) { r += tex[tv2][tu2][0]; g += tex[tv2][tu2][1]; b += tex[tv2][tu2][2]; n++; }
+            for (var tv2 = 0; tv2 < 32; tv2++)
+                for (var tu2 = 0; tu2 < 32; tu2++) { r += tex[tv2][tu2][0]; g += tex[tv2][tu2][1]; b += tex[tv2][tu2][2]; n++; }
             return "rgb(" + Math.round(r / n) + "," + Math.round(g / n) + "," + Math.round(b / n) + ")";
         }
         var TOP_AVG = {
@@ -443,7 +494,7 @@
             var ft = fogT(dist);
             if (ft > 0.01) {
                 var fg = FOG[dim];
-                ctx.fillStyle = "rgba(" + fg[0] + "," + fg[1] + "," + fg[2] + "," + (ft * 0.92).toFixed(3) + ")";
+                ctx.fillStyle = "rgba(" + fg[0] + "," + fg[1] + "," + fg[2] + "," + (ft * 0.78).toFixed(3) + ")";
                 ctx.fill();
             }
         }
@@ -492,7 +543,8 @@
         var holes = [];       // 被挖开的地面坑 {x, z}（对齐 8 网格）
         var bag = { grass: 0, dirt: 0, stone: 0, tree: 0, leaf: 0, gem: 0, bread: 0, plank: 0, brick: 0, hay: 0, apple: 0, craft: 1, torch: 0,
             porkchop: 0, beef: 0, chicken: 0, wool: 0, emerald: 0, rotten: 0, bone: 0, pearl: 0, star: 0, egg: 0,
-            stick: 0, iron: 0, bed: 0, furnace: 0, cooked_porkchop: 0, cooked_beef: 0, cooked_chicken: 0 };
+            stick: 0, iron: 0, bed: 0, furnace: 0, cooked_porkchop: 0, cooked_beef: 0, cooked_chicken: 0,
+            scrap: 0, gold: 0, netherite: 0, netherite_block: 0, debris: 0 };
         var hp = 20, dead = false;   // MC 式：10 颗心 = 20 生命
         var fallStartY = null;
 
@@ -570,19 +622,22 @@
                 { name: "木剑",   dmg: 4, dur: 60,   blade: "#c49a63", guard: "#8d6e63" },
                 { name: "石剑",   dmg: 5, dur: 132,  blade: "#c8ced4", guard: "#6c757d" },
                 { name: "铁剑",   dmg: 6, dur: 251,  blade: "#d8dee6", guard: "#8a9299" },
-                { name: "钻石剑", dmg: 7, dur: 1562, blade: "#7ee8fa", guard: "#38b6d8" }
+                { name: "钻石剑", dmg: 7, dur: 1562, blade: "#7ee8fa", guard: "#38b6d8" },
+                { name: "下界合金剑", dmg: 8, dur: 2031, blade: "#5c4a3f", guard: "#a8862d" }
             ],
             axe: [
                 { name: "木斧",   dmg: 4, dur: 60,   blade: "#c49a63", guard: "#8d6e63" },
                 { name: "石斧",   dmg: 5, dur: 132,  blade: "#c8ced4", guard: "#6c757d" },
                 { name: "铁斧",   dmg: 6, dur: 251,  blade: "#d8dee6", guard: "#8a9299" },
-                { name: "钻石斧", dmg: 7, dur: 1562, blade: "#7ee8fa", guard: "#38b6d8" }
+                { name: "钻石斧", dmg: 7, dur: 1562, blade: "#7ee8fa", guard: "#38b6d8" },
+                { name: "下界合金斧", dmg: 8, dur: 2031, blade: "#5c4a3f", guard: "#a8862d" }
             ],
             pick: [
                 { name: "木镐",   dmg: 3, dur: 60,   blade: "#c49a63", guard: "#8d6e63" },
                 { name: "石镐",   dmg: 4, dur: 132,  blade: "#c8ced4", guard: "#6c757d" },
                 { name: "铁镐",   dmg: 5, dur: 251,  blade: "#d8dee6", guard: "#8a9299" },
-                { name: "钻石镐", dmg: 6, dur: 1562, blade: "#7ee8fa", guard: "#38b6d8" }
+                { name: "钻石镐", dmg: 6, dur: 1562, blade: "#7ee8fa", guard: "#38b6d8" },
+                { name: "下界合金镐", dmg: 7, dur: 2031, blade: "#5c4a3f", guard: "#a8862d" }
             ]
         };
         var toolKind = "axe";          // axe 斧头 / sword 剑 / pick 镐
@@ -617,8 +672,9 @@
         function craftTool(kind, mat) {
             var need = mat === 1 ? { brick: 1, stick: 1 }
                 : mat === 2 ? { iron: 2, stick: 1 }
-                : { gem: 2, stick: 1 };
-            for (var k in need) if (bag[k] < need[k]) { hudMsg("❗ 材料不够！需要 " + (mat === 1 ? "1 石砖 + 1 木棍" : mat === 2 ? "2 铁锭 + 1 木棍" : "2 钻石 + 1 木棍")); return; }
+                : mat === 3 ? { gem: 2, stick: 1 }
+                : { netherite: 2, stick: 1 };
+            for (var k in need) if (bag[k] < need[k]) { hudMsg("❗ 材料不够！需要 " + (mat === 1 ? "1 石砖 + 1 木棍" : mat === 2 ? "2 铁锭 + 1 木棍" : mat === 3 ? "2 钻石 + 1 木棍" : "2 下界合金锭 + 1 木棍")); return; }
             for (var k2 in need) bag[k2] -= need[k2];
             var store = kind === "axe" ? toolAxe : (kind === "sword" ? toolSword : toolPick);
             store.mat = mat; store.dur = TOOLS[kind][mat].dur;
@@ -634,7 +690,8 @@
             { name: "无", def: 0 },
             { name: "皮甲", def: 1 },
             { name: "铁甲", def: 2 },
-            { name: "钻石甲", def: 3 }
+            { name: "钻石甲", def: 3 },
+            { name: "下界合金甲", def: 4 }
         ];
         var armorLevel = 0;
         function armorDef() { return ARMOR_LEVELS[armorLevel].def; }
@@ -814,7 +871,14 @@
             monsters3d = []; animals = []; golems = []; bosses = []; projectiles = [];
             cam.x = 0; cam.z = 0; cam.y = gH(0, 0) + 1.5; cam.vy = 0;
             spawnMonster();
-            if (d === "nether") { spawnBoss("wither"); spawnMonster(); spawnMonster(); }
+            if (d === "nether") {
+                spawnBoss("wither"); spawnMonster(); spawnMonster();
+                // 生成远古残骸（下界合金碎片来源，MC 1.16）
+                for (var db = 0; db < 10; db++) {
+                    var dbx = (Math.random() * 30) - 15, dbz = (Math.random() * 30) - 15;
+                    blocks.push({ x: dbx, y: gH(dbx, dbz) + 0.5, z: dbz, w: 1, h: 1, d: 1, top: "#4a3a33", side: "#3a2c26", type: "debris" });
+                }
+            }
             else if (d === "end") { spawnBoss("dragon"); spawnMonster(); spawnMonster(); spawnMonster(); }
             else if (d === "soul") { spawnBoss("ghostking"); spawnMonster(); spawnMonster(); }
             else { genWorld(); spawnAnimal(); spawnAnimal(); spawnAnimal(); }
@@ -982,7 +1046,7 @@
             var z2 = dy * Math.sin(cam.pitch) + z1 * Math.cos(cam.pitch);
             var behind = z2 <= 0.1;
             var zz = behind ? 0.1 : z2;
-            var f = cx * 0.9;
+            var f = cx * 1.05;   // 视场放大：方块更大更清晰
             return { sx: cx / 2 + x1 / zz * f, sy: cy / 2 - y2 / zz * f, z: z2, behind: behind };
         }
 
@@ -997,14 +1061,14 @@
                 [x - w / 2, y - h / 2, z + d / 2], [x + w / 2, y - h / 2, z + d / 2],
                 [x + w / 2, y + h / 2, z + d / 2], [x - w / 2, y + h / 2, z + d / 2]
             ];
-            // MC 风格面明暗：顶面最亮，侧面次之，底面最暗
+            // MC 风格面明暗：顶面最亮，侧面次之，底面最暗（亮度调高，看得清）
             var faces = [
-                { idx: [4, 5, 6, 7], n: [0, 0, 1],  c: b.side, f: 0.8 },
-                { idx: [1, 0, 3, 2], n: [0, 0, -1], c: b.side, f: 0.8 },
-                { idx: [5, 1, 2, 6], n: [1, 0, 0],  c: b.side, f: 0.62 },
-                { idx: [0, 4, 7, 3], n: [-1, 0, 0], c: b.side, f: 0.62 },
+                { idx: [4, 5, 6, 7], n: [0, 0, 1],  c: b.side, f: 0.88 },
+                { idx: [1, 0, 3, 2], n: [0, 0, -1], c: b.side, f: 0.88 },
+                { idx: [5, 1, 2, 6], n: [1, 0, 0],  c: b.side, f: 0.75 },
+                { idx: [0, 4, 7, 3], n: [-1, 0, 0], c: b.side, f: 0.75 },
                 { idx: [3, 7, 6, 2], n: [0, 1, 0],  c: b.top,  f: 1.0 },
-                { idx: [0, 1, 5, 4], n: [0, -1, 0], c: b.side, f: 0.5 }
+                { idx: [0, 1, 5, 4], n: [0, -1, 0], c: b.side, f: 0.6 }
             ];
             var vx = cam.x - x, vy = cam.y - y, vz = cam.z - z;
             var tc2 = TEXC[b.type];
@@ -1025,7 +1089,17 @@
                 if (cv && dist < 42) drawTexFace(pts, cv, 1 - face.f, dist);   // 远处方块纯色省性能
                 else drawFlatFace(pts, face.c, 1 - face.f, dist);
                 // 侧面垂直光照过渡（上亮下暗，仅近处），顶面不加
-                if (face.n[1] === 0 && dist < 20) faceShadeGrad(pts, 0.14);
+                if (face.n[1] === 0 && dist < 20) faceShadeGrad(pts, 0.07);
+                // 方块轮廓描边（近处，让方块边界清晰）
+                if (dist < 30 && w >= 0.3 && h >= 0.3) {
+                    ctx.strokeStyle = "rgba(0,0,0,0.2)";
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(pts[0].sx, pts[0].sy);
+                    for (var q2 = 1; q2 < 4; q2++) ctx.lineTo(pts[q2].sx, pts[q2].sy);
+                    ctx.closePath();
+                    ctx.stroke();
+                }
             }
         }
 
@@ -1074,52 +1148,84 @@
 
         function drawPig(x, z, fx, fz) {var gy = gH(x, z);
 
-            var pink = "#f2a3c0", dark = "#d17a9d";
+            var pink = "#f0a3a0", dark = "#d17a9d", eye = "#2b2b2b";
             var legs = [[-0.22, -0.3], [0.22, -0.3], [-0.22, 0.3], [0.22, 0.3]];
             for (var i = 0; i < 4; i++)
                 drawBox({ x: x + legs[i][0], y: gy + 0.15, z: z + legs[i][1], w: 0.18, h: 0.3, d: 0.18, top: dark, side: dark });
             drawBox({ x: x, y: gy + 0.55, z: z, w: 0.7, h: 0.55, d: 0.95, top: pink, side: pink });
             var hx = x + fx * 0.5, hz = z + fz * 0.5;
             drawBox({ x: hx, y: gy + 0.95, z: hz, w: 0.4, h: 0.35, d: 0.4, top: pink, side: pink });
-            drawBox({ x: hx + fx * 0.28, y: gy + 0.92, z: hz + fz * 0.28, w: 0.22, h: 0.12, d: 0.1, top: dark, side: dark });
-            drawBox({ x: hx - fz * 0.24, y: gy + 1.2, z: hz + fx * 0.24, w: 0.14, h: 0.14, d: 0.1, top: dark, side: dark });
-            drawBox({ x: hx + fz * 0.24, y: gy + 1.2, z: hz - fx * 0.24, w: 0.14, h: 0.14, d: 0.1, top: dark, side: dark });
+            // 鼻子（粉红拱鼻 + 两个鼻孔）
+            drawBox({ x: hx + fx * 0.28, y: gy + 0.92, z: hz + fz * 0.28, w: 0.24, h: 0.12, d: 0.12, top: dark, side: dark });
+            drawBox({ x: hx + fx * 0.34 - fz * 0.07, y: gy + 0.93, z: hz + fz * 0.34 + fx * 0.07, w: 0.05, h: 0.04, d: 0.03, top: eye, side: eye });
+            drawBox({ x: hx + fx * 0.34 + fz * 0.07, y: gy + 0.93, z: hz + fz * 0.34 - fx * 0.07, w: 0.05, h: 0.04, d: 0.03, top: eye, side: eye });
+            // 眼睛（头两侧黑点）
+            drawBox({ x: hx - fz * 0.24, y: gy + 1.02, z: hz + fx * 0.24, w: 0.08, h: 0.08, d: 0.04, top: eye, side: eye });
+            drawBox({ x: hx + fz * 0.24, y: gy + 1.02, z: hz - fx * 0.24, w: 0.08, h: 0.08, d: 0.04, top: eye, side: eye });
+            // 耳朵（两侧）
+            drawBox({ x: hx - fz * 0.26, y: gy + 1.2, z: hz + fx * 0.26, w: 0.14, h: 0.14, d: 0.1, top: dark, side: dark });
+            drawBox({ x: hx + fz * 0.26, y: gy + 1.2, z: hz - fx * 0.26, w: 0.14, h: 0.14, d: 0.1, top: dark, side: dark });
         }
         function drawSheep(x, z, fx, fz) {var gy = gH(x, z);
 
-            var wool = "#f8f8f2", dark = "#4a4a4a";
+            var wool = "#f5f2e6", dark = "#3a3a3a", eye = "#2b2b2b", face = "#efe9d8";
             var legs = [[-0.25, -0.35], [0.25, -0.35], [-0.25, 0.35], [0.25, 0.35]];
             for (var i = 0; i < 4; i++)
                 drawBox({ x: x + legs[i][0], y: gy + 0.15, z: z + legs[i][1], w: 0.16, h: 0.3, d: 0.16, top: dark, side: dark });
             drawBox({ x: x, y: gy + 0.6, z: z, w: 0.8, h: 0.6, d: 1.05, top: wool, side: wool });
             drawBox({ x: x, y: gy + 0.98, z: z, w: 0.6, h: 0.26, d: 0.85, top: wool, side: wool });
             var hx = x + fx * 0.55, hz = z + fz * 0.55;
-            drawBox({ x: hx, y: gy + 0.85, z: hz, w: 0.38, h: 0.3, d: 0.38, top: dark, side: dark });
+            // 头（浅灰白脸，MC 羊）
+            drawBox({ x: hx, y: gy + 0.85, z: hz, w: 0.38, h: 0.3, d: 0.38, top: face, side: face });
+            // 耳朵
+            drawBox({ x: hx - fz * 0.24, y: gy + 0.97, z: hz + fx * 0.24, w: 0.13, h: 0.1, d: 0.08, top: dark, side: dark });
+            drawBox({ x: hx + fz * 0.24, y: gy + 0.97, z: hz - fx * 0.24, w: 0.13, h: 0.1, d: 0.08, top: dark, side: dark });
+            // 眼睛
+            drawBox({ x: hx - fz * 0.22, y: gy + 0.9, z: hz + fx * 0.22, w: 0.08, h: 0.08, d: 0.04, top: eye, side: eye });
+            drawBox({ x: hx + fz * 0.22, y: gy + 0.9, z: hz - fx * 0.22, w: 0.08, h: 0.08, d: 0.04, top: eye, side: eye });
+            // 鼻子
+            drawBox({ x: hx + fx * 0.2, y: gy + 0.82, z: hz + fz * 0.2, w: 0.1, h: 0.06, d: 0.06, top: dark, side: dark });
         }
         function drawCow(x, z, fx, fz) {var gy = gH(x, z);
 
-            var brown = "#a06a42", white = "#f5f0e6", horn = "#e8dcc0";
+            var brown = "#8d5a2b", white = "#f5f0e6", horn = "#e8dcc0", eye = "#1a1a1a";
             var legs = [[-0.24, -0.35], [0.24, -0.35], [-0.24, 0.35], [0.24, 0.35]];
             for (var i = 0; i < 4; i++)
                 drawBox({ x: x + legs[i][0], y: gy + 0.15, z: z + legs[i][1], w: 0.18, h: 0.3, d: 0.18, top: brown, side: brown });
             drawBox({ x: x, y: gy + 0.55, z: z, w: 0.75, h: 0.6, d: 1.1, top: brown, side: brown });
             drawBox({ x: x + 0.1, y: gy + 0.75, z: z - 0.3, w: 0.3, h: 0.22, d: 0.3, top: white, side: white });
+            drawBox({ x: x - 0.18, y: gy + 0.62, z: z + 0.32, w: 0.26, h: 0.2, d: 0.26, top: white, side: white });
             var hx = x + fx * 0.6, hz = z + fz * 0.6;
             drawBox({ x: hx, y: gy + 0.9, z: hz, w: 0.42, h: 0.36, d: 0.42, top: brown, side: brown });
+            // 白脸 + 鼻孔
             drawBox({ x: hx + fx * 0.24, y: gy + 0.86, z: hz + fz * 0.24, w: 0.2, h: 0.18, d: 0.12, top: white, side: white });
+            drawBox({ x: hx + fx * 0.3 - fz * 0.05, y: gy + 0.87, z: hz + fz * 0.3 + fx * 0.05, w: 0.04, h: 0.04, d: 0.02, top: eye, side: eye });
+            drawBox({ x: hx + fx * 0.3 + fz * 0.05, y: gy + 0.87, z: hz + fz * 0.3 - fx * 0.05, w: 0.04, h: 0.04, d: 0.02, top: eye, side: eye });
+            // 眼睛
+            drawBox({ x: hx - fz * 0.24, y: gy + 0.97, z: hz + fx * 0.24, w: 0.08, h: 0.08, d: 0.04, top: eye, side: eye });
+            drawBox({ x: hx + fz * 0.24, y: gy + 0.97, z: hz - fx * 0.24, w: 0.08, h: 0.08, d: 0.04, top: eye, side: eye });
+            // 角
             drawBox({ x: hx - fz * 0.2, y: gy + 1.14, z: hz + fx * 0.2, w: 0.1, h: 0.16, d: 0.1, top: horn, side: horn });
             drawBox({ x: hx + fz * 0.2, y: gy + 1.14, z: hz - fx * 0.2, w: 0.1, h: 0.16, d: 0.1, top: horn, side: horn });
         }
         function drawChicken(x, z, fx, fz) {var gy = gH(x, z);
 
-            var body = "#fff2cc", red = "#ff6b6b", orange = "#ffa94d";
+            var body = "#f8f6ee", red = "#d64541", orange = "#f2a94d", eye = "#1a1a1a";
             drawBox({ x: x - 0.08, y: gy + 0.12, z: z, w: 0.08, h: 0.24, d: 0.08, top: orange, side: orange });
             drawBox({ x: x + 0.08, y: gy + 0.12, z: z, w: 0.08, h: 0.24, d: 0.08, top: orange, side: orange });
             drawBox({ x: x, y: gy + 0.42, z: z, w: 0.5, h: 0.42, d: 0.55, top: body, side: body });
+            // 尾巴
+            drawBox({ x: x - fx * 0.28, y: gy + 0.55, z: z - fz * 0.28, w: 0.16, h: 0.3, d: 0.16, top: body, side: body });
             var hx = x + fx * 0.35, hz = z + fz * 0.35;
             drawBox({ x: hx, y: gy + 0.72, z: hz, w: 0.28, h: 0.28, d: 0.28, top: body, side: body });
+            // 红冠 + 垂肉
             drawBox({ x: hx, y: gy + 0.92, z: hz, w: 0.16, h: 0.1, d: 0.16, top: red, side: red });
+            drawBox({ x: hx, y: gy + 0.58, z: hz, w: 0.1, h: 0.08, d: 0.1, top: red, side: red });
+            // 橙色喙
             drawBox({ x: hx + fx * 0.19, y: gy + 0.68, z: hz + fz * 0.19, w: 0.12, h: 0.07, d: 0.08, top: orange, side: orange });
+            // 眼睛
+            drawBox({ x: hx - fz * 0.16, y: gy + 0.76, z: hz + fx * 0.16, w: 0.07, h: 0.07, d: 0.03, top: eye, side: eye });
+            drawBox({ x: hx + fz * 0.16, y: gy + 0.76, z: hz - fx * 0.16, w: 0.07, h: 0.07, d: 0.03, top: eye, side: eye });
         }
         function drawVillager(x, z, fx, fz) {var gy = gH(x, z);
 
@@ -1133,8 +1239,11 @@
             drawBox({ x: hx, y: gy + 1.35, z: hz, w: 0.42, h: 0.42, d: 0.42, top: skin, side: skin });
             drawBox({ x: hx, y: gy + 1.58, z: hz, w: 0.44, h: 0.12, d: 0.44, top: hair, side: hair });
             var ex = hx + fx * 0.24, ez = hz + fz * 0.24;
+            // 眼睛
             drawBox({ x: ex - fz * 0.1, y: gy + 1.4, z: ez + fx * 0.1, w: 0.06, h: 0.06, d: 0.02, top: "#1a1a1a", side: "#1a1a1a" });
             drawBox({ x: ex + fz * 0.1, y: gy + 1.4, z: ez - fx * 0.1, w: 0.06, h: 0.06, d: 0.02, top: "#1a1a1a", side: "#1a1a1a" });
+            // 大鼻子（MC 村民标志）
+            drawBox({ x: ex + fx * 0.2, y: gy + 1.36, z: ez + fz * 0.2, w: 0.1, h: 0.14, d: 0.1, top: skin, side: skin });
         }
 
         // ===== 怪物（僵尸/骷髅） =====
@@ -1394,21 +1503,127 @@
             ctx.fillRect(pp.sx - bw / 2 + 1, pp.sy - 2, (bw - 2) * Math.max(hp / max, 0), 3);
         }
 
-        // ===== 方块图标（和方块一模一样的立体形状，代替 emoji） =====
+        // ===== 物品图标（真实图案：方块贴纹理立方体，物品画专属形状） =====
         function shade(hex) {
             var r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
             return "rgb(" + Math.round(r * 0.7) + "," + Math.round(g * 0.7) + "," + Math.round(b * 0.7) + ")";
         }
+        // 等距立方体的一个面贴 16×16 纹理（平行四边形近似）
+        function isoFace(c, texCv, p0, p1, p3, bright) {
+            c.save();
+            c.transform(p1.x - p0.x, p1.y - p0.y, p3.x - p0.x, p3.y - p0.y, p0.x, p0.y);
+            c.imageSmoothingEnabled = false;
+            c.drawImage(texCv, 0, 0, 1, 1);
+            c.restore();
+            if (bright < 1) {
+                c.fillStyle = "rgba(0,0,0," + (1 - bright).toFixed(2) + ")";
+                c.beginPath();
+                c.moveTo(p0.x, p0.y); c.lineTo(p1.x, p1.y);
+                c.lineTo(p1.x + p3.x - p0.x, p1.y + p3.y - p0.y); c.lineTo(p3.x, p3.y);
+                c.closePath(); c.fill();
+            }
+        }
+        // 方块类图标：用真实纹理画成立体方块（顶面 + 左面 + 右面），32×32 原尺寸清晰
+        function drawBlockIcon(c, type) {
+            var tc = TEXC[type], info = BLOCK_INFO[type];
+            var topCv = tc ? (tc.top || tc.side) : null;
+            var sideCv = tc ? tc.side : null;
+            var t0 = { x: 16, y: 9 }, t1 = { x: 27, y: 16 }, t3 = { x: 5, y: 16 };
+            if (topCv) isoFace(c, topCv, t0, t1, t3, 1.0);
+            else { c.fillStyle = info.top; c.beginPath(); c.moveTo(t0.x, t0.y); c.lineTo(t1.x, t1.y); c.lineTo(t1.x + t3.x - t0.x, t1.y + t3.y - t0.y); c.lineTo(t3.x, t3.y); c.closePath(); c.fill(); }
+            if (sideCv) {
+                isoFace(c, sideCv, t3, t0, { x: 5, y: 29 }, 0.9);
+                isoFace(c, sideCv, t0, t1, { x: 16, y: 22 }, 0.75);
+            } else {
+                c.fillStyle = info.side;
+                c.beginPath(); c.moveTo(t3.x, t3.y); c.lineTo(t0.x, t0.y); c.lineTo(t0.x, t0.y + 13); c.lineTo(t3.x, t3.y + 13); c.closePath(); c.fill();
+                c.fillStyle = shade(info.side);
+                c.beginPath(); c.moveTo(t0.x, t0.y); c.lineTo(t1.x, t1.y); c.lineTo(t1.x, t1.y + 13); c.lineTo(t0.x, t0.y + 13); c.closePath(); c.fill();
+            }
+            // 轮廓线（浅色背景也看得清）
+            c.strokeStyle = "rgba(0,0,0,0.45)"; c.lineWidth = 1;
+            c.beginPath();
+            c.moveTo(t0.x, t0.y); c.lineTo(t1.x, t1.y); c.lineTo(t1.x, t1.y + 13); c.lineTo(t0.x, t0.y + 13);
+            c.lineTo(t3.x, t3.y + 13); c.lineTo(t3.x, t3.y); c.lineTo(t0.x, t0.y);
+            c.stroke();
+        }
+        // 需要专属图案（不是方块）的物品
+        var SHAPE_ITEMS = { bread: 1, apple: 1, porkchop: 1, beef: 1, chicken: 1, rotten: 1, bone: 1, pearl: 1, torch: 1, star: 1, egg: 1, stick: 1, cooked_porkchop: 1, cooked_beef: 1, cooked_chicken: 1 };
+        // 物品类图标：画它的专属样子（面包/骨头/珍珠/肉/火把…），32×32 占满
+        function drawShapeIcon(c, type) {
+            var info = BLOCK_INFO[type];
+            function oval(x, y, rx, ry, fill, line) {
+                c.fillStyle = fill; c.strokeStyle = line || "rgba(0,0,0,0.4)"; c.lineWidth = 1.5;
+                c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+            }
+            if (type === "bread") {
+                oval(16, 18, 9, 6, info.top, "#a97c2e");
+                c.fillStyle = "#c99a44"; c.fillRect(10, 16, 12, 2); c.fillRect(12, 20, 8, 1.5);
+                c.fillStyle = "rgba(255,255,255,0.55)"; c.fillRect(11, 14, 9, 1.5);
+            } else if (type === "apple") {
+                oval(16, 19, 7, 7, info.top);
+                c.fillStyle = "#4a8f34"; c.fillRect(15, 7, 3, 5);
+                c.fillStyle = "rgba(255,255,255,0.45)"; c.fillRect(12, 15, 2, 4);
+            } else if (type === "porkchop" || type === "cooked_porkchop") {
+                c.beginPath(); c.moveTo(9, 23); c.quadraticCurveTo(6, 15, 12, 11); c.quadraticCurveTo(20, 7, 25, 12); c.quadraticCurveTo(27, 20, 20, 24); c.quadraticCurveTo(13, 27, 9, 23); c.closePath();
+                c.fillStyle = info.top; c.fill(); c.strokeStyle = "rgba(0,0,0,0.4)"; c.stroke();
+                c.fillStyle = "rgba(255,255,255,0.55)"; c.beginPath(); c.ellipse(13, 16, 3, 2, 0.4, 0, Math.PI * 2); c.fill();
+            } else if (type === "beef" || type === "cooked_beef") {
+                c.beginPath(); c.moveTo(11, 9); c.lineTo(24, 12); c.lineTo(23, 24); c.lineTo(9, 21); c.closePath();
+                c.fillStyle = info.top; c.fill(); c.strokeStyle = "rgba(0,0,0,0.4)"; c.stroke();
+                c.fillStyle = "rgba(255,255,255,0.4)"; c.fillRect(14, 13, 3, 7);
+            } else if (type === "chicken" || type === "cooked_chicken") {
+                c.beginPath(); c.ellipse(16, 17, 8, 6, 0, 0, Math.PI * 2); c.fillStyle = info.top; c.fill();
+                c.strokeStyle = "rgba(0,0,0,0.35)"; c.stroke();
+                c.fillStyle = "#c9965e"; c.beginPath(); c.ellipse(22, 16, 2, 1.5, 0, 0, Math.PI * 2); c.fill();
+            } else if (type === "rotten") {
+                c.beginPath(); c.moveTo(11, 9); c.lineTo(23, 12); c.lineTo(21, 23); c.lineTo(9, 20); c.closePath();
+                c.fillStyle = info.top; c.fill(); c.strokeStyle = "rgba(0,0,0,0.45)"; c.stroke();
+                c.fillStyle = "rgba(30,60,20,0.55)"; c.fillRect(13, 15, 3, 3); c.fillRect(18, 18, 2, 2);
+            } else if (type === "bone") {
+                c.fillStyle = info.top; c.strokeStyle = "rgba(0,0,0,0.4)"; c.lineWidth = 1.5;
+                c.fillRect(7, 15, 18, 3);
+                c.beginPath(); c.arc(8, 16, 3.5, 0, Math.PI * 2); c.fill(); c.stroke();
+                c.beginPath(); c.arc(25, 16, 3.5, 0, Math.PI * 2); c.fill(); c.stroke();
+            } else if (type === "pearl") {
+                var g = c.createRadialGradient(13, 13, 1.5, 16, 17, 9);
+                g.addColorStop(0, "#e6a8f5"); g.addColorStop(0.6, info.top); g.addColorStop(1, info.side);
+                c.fillStyle = g; c.beginPath(); c.arc(16, 17, 8, 0, Math.PI * 2); c.fill();
+                c.strokeStyle = "rgba(0,0,0,0.4)"; c.stroke();
+                c.fillStyle = "rgba(255,255,255,0.9)"; c.beginPath(); c.arc(13, 13, 2.5, 0, Math.PI * 2); c.fill();
+            } else if (type === "torch") {
+                c.fillStyle = "#8d6e63"; c.fillRect(14, 15, 4, 14);
+                c.fillStyle = "#ffd43b"; c.beginPath(); c.arc(16, 10, 4.5, 0, Math.PI * 2); c.fill();
+                c.fillStyle = "#ff8c00"; c.beginPath(); c.arc(16, 10, 2.5, 0, Math.PI * 2); c.fill();
+            } else if (type === "star") {
+                c.fillStyle = info.top; c.strokeStyle = info.side; c.lineWidth = 1.5;
+                c.beginPath();
+                var pts = [[16, 5], [19, 13], [27, 13], [21, 18], [23, 26], [16, 21], [9, 26], [11, 18], [5, 13], [13, 13]];
+                c.moveTo(pts[0][0], pts[0][1]);
+                for (var i2 = 1; i2 < pts.length; i2++) c.lineTo(pts[i2][0], pts[i2][1]);
+                c.closePath(); c.fill(); c.stroke();
+            } else if (type === "egg") {
+                c.beginPath(); c.ellipse(16, 18, 6, 8, 0, 0, Math.PI * 2);
+                c.fillStyle = info.top; c.fill(); c.strokeStyle = "rgba(0,0,0,0.35)"; c.stroke();
+                c.fillStyle = "rgba(150,120,80,0.55)"; c.fillRect(13, 13, 2, 2); c.fillRect(19, 20, 2, 2);
+            } else if (type === "stick") {
+                c.fillStyle = info.top; c.strokeStyle = "rgba(0,0,0,0.4)";
+                c.beginPath(); c.moveTo(8, 23); c.lineTo(24, 9); c.lineTo(27, 12); c.lineTo(11, 26); c.closePath();
+                c.fill(); c.stroke();
+            }
+        }
+        var ICON_CACHE = {};
         function blockIcon(type) {
+            if (ICON_CACHE[type]) return ICON_CACHE[type];
             var info = BLOCK_INFO[type];
             if (!info) return "";
-            var s = 24;
-            var c1 = info.top, c2 = info.side, c3 = shade(info.side);
-            return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 ' + s + ' ' + s + '" style="vertical-align:middle">' +
-                '<path d="M0 ' + (s / 4) + ' L' + (s / 2) + ' ' + (s / 2) + ' L' + (s / 2) + ' ' + s + ' L0 ' + (s * 0.75) + ' Z" fill="' + c2 + '"/>' +
-                '<path d="M' + s + ' ' + (s / 4) + ' L' + (s / 2) + ' ' + (s / 2) + ' L' + (s / 2) + ' ' + s + ' L' + s + ' ' + (s * 0.75) + ' Z" fill="' + c3 + '"/>' +
-                '<path d="M0 ' + (s / 4) + ' L' + (s / 2) + ' 0 L' + s + ' ' + (s / 4) + ' L' + (s / 2) + ' ' + (s / 2) + ' Z" fill="' + c1 + '"/>' +
-                '</svg>';
+            var c = document.createElement("canvas");
+            c.width = 32; c.height = 32;
+            var cx2 = c.getContext("2d");
+            if (SHAPE_ITEMS[type]) drawShapeIcon(cx2, type);
+            else drawBlockIcon(cx2, type);
+            ICON_CACHE[type] = '<img src="' + c.toDataURL() + '" style="width:32px;height:32px;vertical-align:middle">';
+            return ICON_CACHE[type];
         }
 
         // ===== 掉落物粒子 =====
@@ -1524,8 +1739,10 @@
                         : (bm === "mountain" ? TOP_AVG.stone : TOP_AVG.grass);
                     var tpp = projPts([gx, hh, gz], [gx + cell, hh, gz], [gx + cell, hh, gz + cell], [gx, hh, gz + cell]);
                     if (tpp) {
-                        if (dist < 34) drawTexFace(tpp, topTex, 0, dist);
-                        else drawFlatFace(tpp, topAvg, 0, dist);
+                        // 每格轻微明暗抖动，像 MC 草地色斑
+                        var sh2 = tHash((gx * 7 + gz * 13) | 0) < 0.5 ? 0.06 : 0;
+                        if (dist < 34) drawTexFace(tpp, topTex, sh2, dist);
+                        else drawFlatFace(tpp, topAvg, sh2, dist);
                     }
                     // 草地上长小草（一簇簇，像 MC 的草丛，只有主世界）
                     if (dim === "overworld" && bm !== "mountain" && Math.abs((gx * 17 + gz * 29) % 5) < 3) {
@@ -1642,9 +1859,21 @@
                 if (hit.type === "craft") { openCraft(); return; }   // 点工作台 → 打开合成
                 if (hit.type === "furnace") { openFurnace(); return; }   // 点熔炉 → 打开熔炉
                 var bonus = 0;
-                // MC 工具加成：镐挖石头/钻石/石砖 ×2，斧砍木头/树叶 ×2
-                if ((toolKind === "pick" && (hit.type === "stone" || hit.type === "gem" || hit.type === "brick")) ||
+                // MC 工具加成：镐挖石头/钻石/石砖/远古残骸 ×2，斧砍木头/树叶 ×2
+                if ((toolKind === "pick" && (hit.type === "stone" || hit.type === "gem" || hit.type === "brick" || hit.type === "debris")) ||
                     (toolKind === "axe" && (hit.type === "tree" || hit.type === "leaf"))) bonus = 1;
+                if (hit.type === "debris") {   // 远古残骸 → 下界合金碎片
+                    var scrapN = 1 + bonus;
+                    bag.scrap += scrapN;
+                    spawnDrop(hit.x, hit.z, "scrap", scrapN + 1);
+                    consumeDurability();
+                    for (var i9 = 0; i9 < blocks.length; i9++) {
+                        if (blocks[i9] === hit) { blocks.splice(i9, 1); break; }
+                    }
+                    updateHotbar();
+                    hudMsg("⛏️ 挖到 " + scrapN + " 个下界合金碎片！");
+                    return;
+                }
                 for (var i = 0; i < blocks.length; i++) {
                     if (blocks[i] === hit) {
                         bag[hit.type] += 1 + bonus;
@@ -1830,7 +2059,8 @@
             { give: { bread: 2 }, get: { gem: 1 }, label: "2 面包 → 1 钻石" },
             { give: { grass: 3 }, get: { bread: 1 }, label: "3 草 → 1 面包" },
             { give: { stone: 5 }, get: { plank: 2 }, label: "5 石头 → 2 木板" },
-            { give: { bone: 2 }, get: { gem: 1 }, label: "2 骨头 → 1 钻石" }
+            { give: { bone: 2 }, get: { gem: 1 }, label: "2 骨头 → 1 钻石" },
+            { give: { emerald: 1 }, get: { gold: 1 }, label: "1 绿宝石 → 1 金锭" }
         ];
         function openTrade() {
             if (dead) return;
@@ -1912,7 +2142,11 @@
             { out: "furnace", n: 1, need: { stone: 8 }, label: "8 石头 → 1 熔炉" },
             { out: null, n: 0, need: { wool: 3 }, label: "3 羊毛 → 皮甲", kind: "armor", armor: 1 },
             { out: null, n: 0, need: { iron: 3 }, label: "3 铁锭 → 铁甲", kind: "armor", armor: 2 },
-            { out: null, n: 0, need: { gem: 3 }, label: "3 钻石 → 钻石甲", kind: "armor", armor: 3 }
+            { out: null, n: 0, need: { gem: 3 }, label: "3 钻石 → 钻石甲", kind: "armor", armor: 3 },
+            // ===== 下界合金（MC 1.16 顶级） =====
+            { out: "netherite", n: 1, need: { scrap: 4, gold: 4 }, label: "4 碎片 + 4 金锭 → 1 下界合金锭" },
+            { out: "netherite_block", n: 1, need: { netherite: 9 }, label: "9 下界合金锭 → 1 下界合金块" },
+            { out: null, n: 0, need: { netherite: 4 }, label: "4 下界合金锭 → 下界合金甲", kind: "armor", armor: 4 }
         ];
         var craftSel = 0;   // 当前选中的配方
         function openCraft() {
@@ -1948,7 +2182,7 @@
             h += '<h2 style="margin-top:14px">⚒️ 制作工具（木棍 + 材料）</h2>';
             var curT = curToolDef();
             h += '<div class="row"><span>当前：' + curT.name + '（伤害 ' + curT.dmg + '-' + (curT.dmg + 1) + '）</span></div>';
-            var matOpts = [[1, "石", "1 石砖 + 1 木棍"], [2, "铁", "2 铁锭 + 1 木棍"], [3, "钻石", "2 钻石 + 1 木棍"]];
+            var matOpts = [[1, "石", "1 石砖 + 1 木棍"], [2, "铁", "2 铁锭 + 1 木棍"], [3, "钻石", "2 钻石 + 1 木棍"], [4, "下界合金", "2 下界合金锭 + 1 木棍"]];
             for (var mi = 0; mi < matOpts.length; mi++) {
                 var mk = matOpts[mi][0], mn = matOpts[mi][1], ml = matOpts[mi][2];
                 if (curTool().mat >= mk) continue;   // 已有更高级就不用再做
@@ -2031,22 +2265,30 @@
             if (dim === "nether") { sky.addColorStop(0, "#3a0f08"); sky.addColorStop(0.6, "#6e1f12"); sky.addColorStop(1, "#2a0a05"); }
             else if (dim === "end") { sky.addColorStop(0, "#0a0616"); sky.addColorStop(0.6, "#1c1230"); sky.addColorStop(1, "#0e0818"); }
             else if (dim === "soul") { sky.addColorStop(0, "#232c3e"); sky.addColorStop(0.7, "#3a4a63"); sky.addColorStop(1, "#1c2432"); }
-            else { sky.addColorStop(0, "#5ec4f2"); sky.addColorStop(0.75, "#bde8fa"); sky.addColorStop(1, "#cdeec9"); }
+            else {
+                // 主世界：随昼夜变化的分层天空（MC 光影氛围）
+                var phSky = dayPhase();
+                if (phSky === "night") { sky.addColorStop(0, "#070b1e"); sky.addColorStop(0.6, "#121a36"); sky.addColorStop(1, "#1e2a4a"); }
+                else if (phSky === "dusk") { sky.addColorStop(0, "#2b3a67"); sky.addColorStop(0.55, "#e2703a"); sky.addColorStop(1, "#ffc46b"); }
+                else { sky.addColorStop(0, "#3d8bfd"); sky.addColorStop(0.6, "#7cc4f7"); sky.addColorStop(1, "#c4e8fa"); }   // 底部=雾色，远景融合
+            }
             ctx.fillStyle = sky;
             ctx.fillRect(0, 0, cx, cy);
 
-            // 云（MC 风格方块云，缓慢飘动）
+            // 云（MC 风格方块云，两层飘动：远景小云 + 近景大云，速度不同）
             if (dim === "overworld") {
-                for (var ci = 0; ci < 5; ci++) {
-                    var cxp = ((cx + ci * 300 + performance.now() * 0.004) % (cx + 620)) - 310;
-                    var cyp = 62 + (ci % 3) * 50;
-                    // 每朵云由 3 层白色方块组成（MC 的方块云），底部带浅灰
-                    var w1 = 96 + (ci % 2) * 24, h1 = 16;
-                    ctx.fillStyle = "rgba(255,255,255,0.9)";
+                for (var ci = 0; ci < 8; ci++) {
+                    var spd = 0.004 + (ci % 3) * 0.0016;   // 近云飘得快（视差）
+                    var cxp = ((cx + ci * 300 + performance.now() * spd) % (cx + 640)) - 320;
+                    var cyp = 48 + (ci % 4) * 48;
+                    var big = ci >= 5;   // 后 3 朵是大云
+                    var w1 = (92 + (ci % 2) * 24) * (big ? 1.45 : 1), h1 = 15 * (big ? 1.25 : 1);
+                    var a = big ? 0.95 : 0.72;
+                    ctx.fillStyle = "rgba(255,255,255," + a + ")";
                     ctx.fillRect(cxp - w1, cyp, w1 * 2, h1);
                     ctx.fillRect(cxp - w1 * 0.45, cyp - 10, w1 * 0.9, h1);
                     ctx.fillRect(cxp - w1 * 0.85, cyp + 8, w1 * 1.7, h1);
-                    ctx.fillStyle = "rgba(196,202,220,0.6)";
+                    ctx.fillStyle = "rgba(190,198,220," + (a * 0.7) + ")";
                     ctx.fillRect(cxp - w1 * 0.85, cyp + 20, w1 * 1.7, 6);
                 }
             }
@@ -2055,7 +2297,7 @@
             if (dim === "overworld") {
                 var phS = dayPhase();
                 if (phS !== "night") {
-                    // 太阳（带光晕）
+                    // 太阳（带光晕 + 十字光芒）
                     var sunX = cx * 0.74, sunY = cy * 0.2;
                     var sg = ctx.createRadialGradient(sunX, sunY, 6, sunX, sunY, 52);
                     sg.addColorStop(0, "rgba(255,246,200,0.95)");
@@ -2063,8 +2305,22 @@
                     sg.addColorStop(1, "rgba(255,200,80,0)");
                     ctx.fillStyle = sg;
                     ctx.beginPath(); ctx.arc(sunX, sunY, 52, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = "#fff4b8";
-                    ctx.beginPath(); ctx.arc(sunX, sunY, 17, 0, Math.PI * 2); ctx.fill();
+                    // 十字光芒（8 条细射线）
+                    ctx.strokeStyle = "rgba(255,242,190,0.55)";
+                    ctx.lineWidth = 2;
+                    for (var ray = 0; ray < 8; ray++) {
+                        var ra = ray * Math.PI / 4;
+                        ctx.beginPath();
+                        ctx.moveTo(sunX + Math.cos(ra) * 24, sunY + Math.sin(ra) * 24);
+                        ctx.lineTo(sunX + Math.cos(ra) * 84, sunY + Math.sin(ra) * 84);
+                        ctx.stroke();
+                    }
+                    // 白色方块太阳（MC 1.8 是方块）+ 光晕 + 光芒
+                    ctx.fillStyle = "#fff8dc";
+                    ctx.fillRect(sunX - 16, sunY - 16, 32, 32);
+                    ctx.strokeStyle = "rgba(255,244,200,0.8)";
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(sunX - 16, sunY - 16, 32, 32);
                 } else {
                     // 星星（固定分布，确定性）
                     ctx.fillStyle = "rgba(255,255,255,0.9)";
@@ -2074,7 +2330,7 @@
                         var tw = 0.6 + 0.6 * tHash(st * 31 + 9);
                         ctx.fillRect(sx2, sy2, tw, tw);
                     }
-                    // 月亮（带光晕）
+                    // 月亮（MC 风格白色方块 + 新月缺口）
                     var mX = cx * 0.75, mY = cy * 0.18;
                     var mg = ctx.createRadialGradient(mX, mY, 2, mX, mY, 34);
                     mg.addColorStop(0, "rgba(235,240,250,0.9)");
@@ -2083,7 +2339,12 @@
                     ctx.fillStyle = mg;
                     ctx.beginPath(); ctx.arc(mX, mY, 34, 0, Math.PI * 2); ctx.fill();
                     ctx.fillStyle = "#eef1f8";
-                    ctx.beginPath(); ctx.arc(mX, mY, 14, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillRect(mX - 14, mY - 14, 28, 28);
+                    // 新月缺口（夜色盖出月牙）
+                    ctx.fillStyle = "#141c38";
+                    ctx.beginPath();
+                    ctx.arc(mX + 8, mY - 8, 18, 0, Math.PI * 2);
+                    ctx.fill();
                 }
             }
 
@@ -2244,10 +2505,12 @@
 
             drawGround();
 
-            // 方块地面软阴影（贴地方块投影，限制尺寸防遮挡屏幕）
+            // ===== 光影：地面阴影（接触阴影 + 太阳斜射投影，MC 光影风格） =====
             if (dim !== "end") {   // 末地是浮空岛，不画投影
                 var fSh = cx * 0.9;
-                ctx.fillStyle = "rgba(0,0,0,0.22)";
+                var phSh = dayPhase();
+                var shAlpha = dim === "nether" ? 0.16 : (phSh === "night" ? 0.12 : 0.2);
+                var shA = dim === "nether" ? 0.45 : 0.85, shB = dim === "nether" ? 0.3 : 0.55;   // 影子斜向向量
                 for (var bi2 = 0; bi2 < blocks.length; bi2++) {
                     var bl2 = blocks[bi2];
                     var gyb = gH(bl2.x, bl2.z);
@@ -2256,9 +2519,32 @@
                         if (pj && !pj.behind && pj.z > 1.3 && pj.z < 28) {
                             var rx2 = Math.min(bl2.w * 0.58 * fSh / pj.z, 40);   // 半径上限防巨大黑斑
                             var ry2 = Math.min(bl2.d * 0.3 * fSh / pj.z, 20);
+                            ctx.fillStyle = "rgba(0,0,0," + (shAlpha * 0.9).toFixed(2) + ")";
                             ctx.beginPath();
                             ctx.ellipse(pj.sx, pj.sy, rx2, ry2, 0, 0, Math.PI * 2);
                             ctx.fill();
+                            // 斜向长投影（太阳光方向：方块越高影子越长）
+                            if (bl2.h > 0.5) {
+                                var len = Math.min(bl2.h * 1.3, 6);
+                                var sx0 = bl2.x - bl2.w / 2, sz0 = bl2.z - bl2.d / 2;
+                                var sx1 = bl2.x + bl2.w / 2, sz1 = bl2.z + bl2.d / 2;
+                                var ex0 = sx0 + shA * len, ez0 = sz0 + shB * len;
+                                var ex1 = sx1 + shA * len, ez1 = sz1 + shB * len;
+                                var sp1 = project(sx0, gH(sx0, sz0) + 0.04, sz0);
+                                var sp2 = project(sx1, gH(sx1, sz0) + 0.04, sz0);
+                                var sp3 = project(ex1, gH(ex1, ez1) + 0.04, ez1);
+                                var sp4 = project(ex0, gH(ex0, ez0) + 0.04, ez0);
+                                if (sp1 && !sp1.behind && sp2 && !sp2.behind && sp3 && !sp3.behind && sp4 && !sp4.behind) {
+                                    ctx.fillStyle = "rgba(0,0,0," + shAlpha.toFixed(2) + ")";
+                                    ctx.beginPath();
+                                    ctx.moveTo(sp1.sx, sp1.sy);
+                                    ctx.lineTo(sp2.sx, sp2.sy);
+                                    ctx.lineTo(sp3.sx, sp3.sy);
+                                    ctx.lineTo(sp4.sx, sp4.sy);
+                                    ctx.closePath();
+                                    ctx.fill();
+                                }
+                            }
                         }
                     }
                 }
@@ -2317,13 +2603,31 @@
                 }
             }
 
-            // 昼夜（白天 / 天黑 / 夜晚）
+            // 昼夜（白天 / 天黑 / 夜晚）——MC 光影色调
             var ph = dayPhase();
             updateDayPhase();
-            if (ph === "night") ctx.fillStyle = "rgba(8, 12, 40, 0.55)";
-            else if (ph === "dusk") ctx.fillStyle = "rgba(60, 35, 80, 0.22)";
-            else ctx.fillStyle = "rgba(255, 210, 130, 0.04)";
+            if (ph === "night") ctx.fillStyle = "rgba(8, 12, 40, 0.42)";
+            else if (ph === "dusk") ctx.fillStyle = "rgba(255, 130, 60, 0.16)";   // MC 日落橙红
+            else ctx.fillStyle = "rgba(255, 240, 190, 0.08)";   // 白天微暖阳光
             ctx.fillRect(0, 0, cx, cy);
+
+            // 火把动态光照（夜晚照亮周围，MC 光影效果；下界/末地火把同样发光）
+            if (torches.length > 0 && ph === "night") {
+                ctx.globalCompositeOperation = "lighter";
+                for (var tb2 = 0; tb2 < torches.length; tb2++) {
+                    var tc2 = torches[tb2];
+                    var fpl = project(tc2.x, tc2.y + 1.1, tc2.z);
+                    if (fpl && !fpl.behind && fpl.z < 35) {
+                        var rad = 110 / (fpl.z / 18 + 0.7);
+                        var gr2 = ctx.createRadialGradient(fpl.sx, fpl.sy, 2, fpl.sx, fpl.sy, rad);
+                        gr2.addColorStop(0, "rgba(255,170,60,0.5)");
+                        gr2.addColorStop(1, "rgba(255,170,60,0)");
+                        ctx.fillStyle = gr2;
+                        ctx.beginPath(); ctx.arc(fpl.sx, fpl.sy, rad, 0, Math.PI * 2); ctx.fill();
+                    }
+                }
+                ctx.globalCompositeOperation = "source-over";
+            }
 
             // 剑（第一人称，最上层）
             if (swordSwing > 0) drawAxe();
