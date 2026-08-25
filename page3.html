@@ -79,15 +79,14 @@
             display: flex; gap: 6px; z-index: 10; pointer-events: none;
         }
         .hot-slot {
-            position: relative; width: 46px; height: 46px;
+            position: relative; width: 54px; height: 54px;
             display: flex; align-items: center; justify-content: center;
             background: rgba(0, 0, 0, 0.55);
             border: 2px solid rgba(255, 255, 255, 0.35);
             border-radius: 9px; color: #fff;
         }
-        .hot-slot img { width: 36px !important; height: 36px !important; }
         .hot-slot .num { position: absolute; left: 4px; top: 2px; font-size: 12px; font-weight: bold; color: #eee; }
-        .hot-slot .cnt { position: absolute; right: 3px; bottom: 2px; font-size: 13px; color: #ffd43b; font-weight: bold; }
+        .hot-slot .cnt { position: absolute; right: 3px; bottom: 2px; font-size: 14px; color: #ffd43b; font-weight: bold; }
         .hot-slot.sel { border-color: #ffd43b; box-shadow: 0 0 12px #ffd43b; }
         /* 合成网格（工作台按格子摆放） */
         .craft-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 220px; margin: 10px auto; }
@@ -132,7 +131,6 @@
             border-radius: 4px; padding: 0 4px;
         }
         .bag-cell svg { width: 30px; height: 30px; }
-        .bag-cell img { width: 38px !important; height: 38px !important; }
         .bag-tip { font-size: 13px; color: #777; margin: 6px 0; }
         /* 覆盖面板（背包/制作/重生） */
         #panel {
@@ -251,13 +249,14 @@
     </div>
 
     <script>
-        // ===== 画布 =====
+        // ===== 画布（适配高分屏，画面不模糊） =====
         var canvas = document.getElementById("game");
         var ctx = canvas.getContext("2d");
         var cx = canvas.width, cy = canvas.height;
         function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            var dpr = Math.min(window.devicePixelRatio || 1, 1.5);   // 高分屏提清晰度，上限 1.5 防卡顿
+            canvas.width = Math.floor(window.innerWidth * dpr);
+            canvas.height = Math.floor(window.innerHeight * dpr);
             cx = canvas.width; cy = canvas.height;
         }
         resize();
@@ -317,23 +316,23 @@
         }
         var TEX = {};
         // ===== 全部按 MC 1.8.8 原版配色 =====
-        // 泥土 #966C4A
-        TEX.dirt = makeTex(function (u, v) { var n = tnz(u, v, 11), d = (n - 0.5) * 26; return [clamp255(150 + d), clamp255(108 + d), clamp255(74 + d)]; });
-        // 石头 #999999
-        TEX.stone = makeTex(function (u, v) { var n = tnz(u, v, 23), d = (n - 0.5) * 40; return [clamp255(153 + d), clamp255(153 + d), clamp255(153 + d)]; });
-        // 草顶 #7cbd4b（深浅大斑块，地面更真实）
+        // 泥土 #966C4A（提亮看得清）
+        TEX.dirt = makeTex(function (u, v) { var n = tnz(u, v, 11), d = (n - 0.5) * 26; return [clamp255(168 + d), clamp255(121 + d), clamp255(83 + d)]; });
+        // 石头 #999999（提亮）
+        TEX.stone = makeTex(function (u, v) { var n = tnz(u, v, 23), d = (n - 0.5) * 38; return [clamp255(164 + d), clamp255(164 + d), clamp255(164 + d)]; });
+        // 草顶 #7cbd4b（提亮 + 深浅大斑块）
         TEX.grass_top = makeTex(function (u, v) {
-            var n = tnz(u, v, 37), d = (n - 0.5) * 30;
+            var n = tnz(u, v, 37), d = (n - 0.5) * 28;
             var patch = ((Math.floor(u / 16) + Math.floor(v / 16)) % 2 === 0) ? 0 : 10;   // 2×2 大斑块
-            return [clamp255(124 + d * 0.5 + patch), clamp255(189 + d + patch), clamp255(75 + d * 0.35 + patch * 0.5)];
+            return [clamp255(138 + d * 0.5 + patch), clamp255(209 + d + patch), clamp255(84 + d * 0.35 + patch * 0.5)];
         });
-        // 草侧：上 8 行草皮 #7cbd4b（边缘自然垂落）+ 下泥土
+        // 草侧：上 8 行草皮 #7cbd4b（提亮 + 边缘自然垂落）+ 下泥土
         TEX.grass_side = makeTex(function (u, v) {
-            if (v < 8) { var n = tnz(u, v, 41), d = (n - 0.5) * 26; var edge = v === 7 ? -12 : 0; return [clamp255(122 + d * 0.5 + edge), clamp255(187 + d + edge), clamp255(73 + d * 0.35 + edge * 0.5)]; }
-            var m = tnz(u, v, 43), e = (m - 0.5) * 24; return [clamp255(150 + e), clamp255(108 + e), clamp255(74 + e)];
+            if (v < 8) { var n = tnz(u, v, 41), d = (n - 0.5) * 24; var edge = v === 7 ? -12 : 0; return [clamp255(136 + d * 0.5 + edge), clamp255(206 + d + edge), clamp255(81 + d * 0.35 + edge * 0.5)]; }
+            var m = tnz(u, v, 43), e = (m - 0.5) * 24; return [clamp255(168 + e), clamp255(121 + e), clamp255(83 + e)];
         });
-        // 橡木原木 #6b4d2f
-        TEX.tree_side = makeTex(function (u, v) { var n = tnz(u, v, 53), d = (n - 0.5) * 30; return [clamp255(107 + d), clamp255(77 + d), clamp255(47 + d)]; });
+        // 橡木原木 #6b4d2f（提亮）
+        TEX.tree_side = makeTex(function (u, v) { var n = tnz(u, v, 53), d = (n - 0.5) * 28; return [clamp255(122 + d), clamp255(88 + d), clamp255(54 + d)]; });
         // 树顶年轮
         TEX.tree_top = makeTex(function (u, v) {
             var dx = u - 15.5, dy = v - 15.5, r = Math.sqrt(dx * dx + dy * dy);
@@ -341,11 +340,11 @@
             var n = tnz(u, v, 59), d = (n - 0.5) * 16;
             return [clamp255(ring + d), clamp255(ring * 0.74 + d), clamp255(ring * 0.45 + d)];
         });
-        // 树叶 #3d7d2c（深浅两层，更立体）
+        // 树叶 #3d7d2c（提亮 + 深浅两层，更立体）
         TEX.leaf = makeTex(function (u, v) {
-            var n = tnz(u, v, 61), d = (n - 0.5) * 34;
-            var layer = ((Math.floor(u / 8) + Math.floor(v / 8)) % 2 === 0) ? 0 : -14;   // 2×2 区块深浅交错
-            return [clamp255(63 + d * 0.5 + layer), clamp255(127 + d + layer), clamp255(45 + d * 0.3 + layer * 0.5)];
+            var n = tnz(u, v, 61), d = (n - 0.5) * 32;
+            var layer = ((Math.floor(u / 8) + Math.floor(v / 8)) % 2 === 0) ? 0 : -12;   // 2×2 区块深浅交错
+            return [clamp255(70 + d * 0.5 + layer), clamp255(140 + d + layer), clamp255(50 + d * 0.3 + layer * 0.5)];
         });
         // 钻石块 #4aedd9
         TEX.gem = makeTex(function (u, v) { var n = tnz(u, v, 67); var c = n > 0.82 ? 28 : (n > 0.5 ? 6 : -8); return [clamp255(74 + c), clamp255(237 + c * 0.6), clamp255(217 + c * 0.6)]; });
@@ -459,7 +458,7 @@
 
         // 各维度的雾色（MC 风格距离雾）
         var FOG = { overworld: [196, 232, 250], nether: [84, 26, 14], end: [24, 16, 44], soul: [64, 78, 100] };
-        function fogT(dist) { var t = Math.max(0, Math.min(1, (dist - 45) / 50)); return t * t * (3 - 2 * t); }   // 雾从 45 米开始，近处更清晰
+        function fogT(dist) { var t = Math.max(0, Math.min(1, (dist - 55) / 45)); return t * t * (3 - 2 * t); }   // 雾从 55 米才开始，近处完全清晰
 
         // 在投影四边形上画纹理（仿射近似）+ 明暗罩 + 距离雾
         function drawTexFace(pts, texCv, shade, dist) {
@@ -508,7 +507,7 @@
             var ft = fogT(dist);
             if (ft > 0.01) {
                 var fg = FOG[dim];
-                ctx.fillStyle = "rgba(" + fg[0] + "," + fg[1] + "," + fg[2] + "," + (ft * 0.78).toFixed(3) + ")";
+                ctx.fillStyle = "rgba(" + fg[0] + "," + fg[1] + "," + fg[2] + "," + (ft * 0.55).toFixed(3) + ")";
                 ctx.fill();
             }
         }
@@ -1071,7 +1070,7 @@
             var z2 = dy * Math.sin(cam.pitch) + z1 * Math.cos(cam.pitch);
             var behind = z2 <= 0.1;
             var zz = behind ? 0.1 : z2;
-            var f = cx * 1.05;   // 视场放大：方块更大更清晰
+            var f = cx * 1.35;   // 视场大幅放大：方块在屏幕上更大更清楚
             return { sx: cx / 2 + x1 / zz * f, sy: cy / 2 - y2 / zz * f, z: z2, behind: behind };
         }
 
@@ -1086,14 +1085,14 @@
                 [x - w / 2, y - h / 2, z + d / 2], [x + w / 2, y - h / 2, z + d / 2],
                 [x + w / 2, y + h / 2, z + d / 2], [x - w / 2, y + h / 2, z + d / 2]
             ];
-            // MC 风格面明暗：顶面最亮，侧面次之，底面最暗（再提亮，看得清）
+            // MC 风格面明暗：顶面最亮，侧面次之，底面最暗（高亮，看得清）
             var faces = [
-                { idx: [4, 5, 6, 7], n: [0, 0, 1],  c: b.side, f: 0.92 },
-                { idx: [1, 0, 3, 2], n: [0, 0, -1], c: b.side, f: 0.92 },
-                { idx: [5, 1, 2, 6], n: [1, 0, 0],  c: b.side, f: 0.82 },
-                { idx: [0, 4, 7, 3], n: [-1, 0, 0], c: b.side, f: 0.82 },
+                { idx: [4, 5, 6, 7], n: [0, 0, 1],  c: b.side, f: 0.95 },
+                { idx: [1, 0, 3, 2], n: [0, 0, -1], c: b.side, f: 0.95 },
+                { idx: [5, 1, 2, 6], n: [1, 0, 0],  c: b.side, f: 0.88 },
+                { idx: [0, 4, 7, 3], n: [-1, 0, 0], c: b.side, f: 0.88 },
                 { idx: [3, 7, 6, 2], n: [0, 1, 0],  c: b.top,  f: 1.0 },
-                { idx: [0, 1, 5, 4], n: [0, -1, 0], c: b.side, f: 0.65 }
+                { idx: [0, 1, 5, 4], n: [0, -1, 0], c: b.side, f: 0.78 }
             ];
             var vx = cam.x - x, vy = cam.y - y, vz = cam.z - z;
             var tc2 = TEXC[b.type];
@@ -1111,14 +1110,14 @@
                 // 有纹理 → 纹理贴面；否则纯色（生物等），统一加明暗 + 雾
                 var cv = null;
                 if (tc2) cv = face.n[1] > 0 ? (tc2.top || tc2.side) : tc2.side;
-                if (cv && dist < 42) drawTexFace(pts, cv, 1 - face.f, dist);   // 远处方块纯色省性能
+                if (cv && dist < 55) drawTexFace(pts, cv, 1 - face.f, dist);   // 方块纹理距离拉到 55 米
                 else drawFlatFace(pts, face.c, 1 - face.f, dist);
                 // 侧面垂直光照过渡（上亮下暗，仅近处），顶面不加
                 if (face.n[1] === 0 && dist < 20) faceShadeGrad(pts, 0.07);
-                // 方块轮廓描边（近处，让方块边界清晰）
-                if (dist < 30 && w >= 0.3 && h >= 0.3) {
-                    ctx.strokeStyle = "rgba(0,0,0,0.3)";
-                    ctx.lineWidth = 1.2;
+                // 方块轮廓描边（近处，边界清晰）
+                if (dist < 35 && w >= 0.3 && h >= 0.3) {
+                    ctx.strokeStyle = "rgba(0,0,0,0.45)";
+                    ctx.lineWidth = 1.3;
                     ctx.beginPath();
                     ctx.moveTo(pts[0].sx, pts[0].sy);
                     for (var q2 = 1; q2 < 4; q2++) ctx.lineTo(pts[q2].sx, pts[q2].sy);
@@ -1674,11 +1673,12 @@
             var info = BLOCK_INFO[type];
             if (!info) return "";
             var c = document.createElement("canvas");
-            c.width = 32; c.height = 32;
+            c.width = 48; c.height = 48;   // 48×48 大画布，原尺寸显示，零缩放最清晰
             var cx2 = c.getContext("2d");
+            cx2.scale(1.5, 1.5);   // 32 设计坐标放大到 48（最近邻，像素锐利）
             if (SHAPE_ITEMS[type]) drawShapeIcon(cx2, type);
             else drawBlockIcon(cx2, type);
-            ICON_CACHE[type] = '<img src="' + c.toDataURL() + '" style="width:32px;height:32px;vertical-align:middle">';
+            ICON_CACHE[type] = '<img src="' + c.toDataURL() + '" style="width:48px;height:48px;vertical-align:middle">';
             return ICON_CACHE[type];
         }
 
@@ -1710,8 +1710,8 @@
 
             var info = BLOCK_INFO[d.type];
             if (!info) return;
-            // 掉落物 = 和方块一模一样的小方块
-            drawBox({ x: d.x, y: gy + d.y, z: d.z, w: 0.35, h: 0.35, d: 0.35, top: info.top, side: info.side, type: d.type });
+            // 掉落物 = 大一点的小方块（0.5 米），看得清
+            drawBox({ x: d.x, y: gy + d.y, z: d.z, w: 0.5, h: 0.5, d: 0.5, top: info.top, side: info.side, type: d.type });
         }
 
         // 判断某位置是否有方块（AI 避障用，半宽 half）
@@ -1776,7 +1776,7 @@
                     if (holed) {
                         var dh = hh - 2.5;
                         quad4(gx, dh, gz, gx + cell, dh, gz, gx + cell, dh, gz + cell, gx, dh, gz + cell, "#170f0a");
-                        if (dist < 34) {   // 近处坑壁才画纹理，远处省性能
+                        if (dist < 55) {   // 坑壁纹理距离拉到 55 米
                             var wpp = projPts([gx, hh, gz], [gx + cell, hh, gz], [gx + cell, dh, gz], [gx, dh, gz]);
                             if (wpp) drawTexFace(wpp, wallTex, 0.35, dist);
                             wpp = projPts([gx, hh, gz + cell], [gx + cell, hh, gz + cell], [gx + cell, dh, gz + cell], [gx, dh, gz + cell]);
@@ -1788,7 +1788,7 @@
                         }
                         continue;
                     }
-                    // 顶面（近处 MC 像素纹理；远处用平均色纯色，省性能）
+                    // 顶面（MC 像素纹理，距离拉到 55 米，远处也看得清）
                     var topAvg = dim === "nether" ? TOP_AVG.netherrack
                         : dim === "end" ? TOP_AVG.endstone
                         : dim === "soul" ? TOP_AVG.soulsand
@@ -1797,8 +1797,17 @@
                     if (tpp) {
                         // 每格轻微明暗抖动，像 MC 草地色斑
                         var sh2 = tHash((gx * 7 + gz * 13) | 0) < 0.5 ? 0.06 : 0;
-                        if (dist < 34) drawTexFace(tpp, topTex, sh2, dist);
+                        if (dist < 55) drawTexFace(tpp, topTex, sh2, dist);
                         else drawFlatFace(tpp, topAvg, sh2, dist);
+                        // 方块格线（近处，边界对比更清晰）
+                        if (dist < 28) {
+                            ctx.strokeStyle = "rgba(0,0,0,0.28)";
+                            ctx.lineWidth = 1.1;
+                            ctx.beginPath();
+                            ctx.moveTo(tpp[0].sx, tpp[0].sy); ctx.lineTo(tpp[1].sx, tpp[1].sy);
+                            ctx.lineTo(tpp[2].sx, tpp[2].sy); ctx.lineTo(tpp[3].sx, tpp[3].sy);
+                            ctx.closePath(); ctx.stroke();
+                        }
                     }
                     // 草地上长小草（一簇簇，像 MC 的草丛，只有主世界）
                     if (dim === "overworld" && bm !== "mountain" && Math.abs((gx * 17 + gz * 29) % 5) < 3) {
@@ -1930,18 +1939,33 @@
                     hudMsg("⛏️ 挖到 " + scrapN + " 个下界合金碎片！");
                     return;
                 }
+                var removed = false;
                 for (var i = 0; i < blocks.length; i++) {
                     if (blocks[i] === hit) {
                         bag[hit.type] += 1 + bonus;
                         spawnDrop(hit.x, hit.z, hit.type, 2 + bonus);
                         consumeDurability();   // 挖方块也耗耐久
                         blocks.splice(i, 1);
-                        if (hit.type === "bed") {   // 挖掉床 → 移除睡觉点
-                            for (var bi2 = beds.length - 1; bi2 >= 0; bi2--)
-                                if (Math.abs(beds[bi2].x - hit.x) < 0.6 && Math.abs(beds[bi2].z - hit.z) < 0.6) beds.splice(bi2, 1);
-                        }
+                        removed = true;
                         break;
                     }
+                }
+                if (!removed) {   // 兜底：引用不匹配时按位置+类型找，保证挖得掉
+                    for (var i3 = 0; i3 < blocks.length; i3++) {
+                        var bk3 = blocks[i3];
+                        if (bk3.type === hit.type && Math.abs(bk3.x - hit.x) < 0.6 && Math.abs(bk3.z - hit.z) < 0.6 && Math.abs(bk3.y - hit.y) < 0.8) {
+                            bag[hit.type] += 1 + bonus;
+                            spawnDrop(hit.x, hit.z, hit.type, 2 + bonus);
+                            consumeDurability();
+                            blocks.splice(i3, 1);
+                            removed = true;
+                            break;
+                        }
+                    }
+                }
+                if (removed && hit.type === "bed") {   // 挖掉床 → 移除睡觉点
+                    for (var bi2 = beds.length - 1; bi2 >= 0; bi2--)
+                        if (Math.abs(beds[bi2].x - hit.x) < 0.6 && Math.abs(beds[bi2].z - hit.z) < 0.6) beds.splice(bi2, 1);
                 }
                 updateHotbar();
                 hudMsg("⛏️ 挖到 " + (1 + bonus) + " 个" + BLOCK_INFO[hit.type].name + (bonus ? "（工具加成！）" : "") + "！");
@@ -2682,7 +2706,7 @@
             // 昼夜（白天 / 天黑 / 夜晚）——MC 光影色调
             var ph = dayPhase();
             updateDayPhase();
-            if (ph === "night") ctx.fillStyle = "rgba(8, 12, 40, 0.42)";
+            if (ph === "night") ctx.fillStyle = "rgba(8, 12, 40, 0.25)";
             else if (ph === "dusk") ctx.fillStyle = "rgba(255, 130, 60, 0.16)";   // MC 日落橙红
             else ctx.fillStyle = "rgba(255, 240, 190, 0.08)";   // 白天微暖阳光
             ctx.fillRect(0, 0, cx, cy);
