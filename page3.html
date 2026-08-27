@@ -10,6 +10,7 @@
             position: fixed; inset: 0;
             width: 100vw; height: 100vh;
             display: block; cursor: crosshair;
+            image-rendering: pixelated;   /* 强制像素锐利，防止浏览器平滑缩放导致模糊 */
         }
         /* 左上操作说明 */
         #hud {
@@ -257,6 +258,8 @@
             var dpr = Math.min(window.devicePixelRatio || 1, 1.5);   // 高分屏提清晰度，上限 1.5 防卡顿
             canvas.width = Math.floor(window.innerWidth * dpr);
             canvas.height = Math.floor(window.innerHeight * dpr);
+            canvas.style.width = window.innerWidth + "px";   // CSS 尺寸锁定，物理=逻辑×dpr，杜绝模糊缩放
+            canvas.style.height = window.innerHeight + "px";
             cx = canvas.width; cy = canvas.height;
         }
         resize();
@@ -458,7 +461,7 @@
 
         // 各维度的雾色（MC 风格距离雾）
         var FOG = { overworld: [196, 232, 250], nether: [84, 26, 14], end: [24, 16, 44], soul: [64, 78, 100] };
-        function fogT(dist) { var t = Math.max(0, Math.min(1, (dist - 55) / 45)); return t * t * (3 - 2 * t); }   // 雾从 55 米才开始，近处完全清晰
+        function fogT(dist) { var t = Math.max(0, Math.min(1, (dist - 65) / 35)); return t * t * (3 - 2 * t); }   // 雾从 65 米才开始且很淡，几乎不影响清晰度
 
         // 在投影四边形上画纹理（仿射近似）+ 明暗罩 + 距离雾
         function drawTexFace(pts, texCv, shade, dist) {
@@ -507,7 +510,7 @@
             var ft = fogT(dist);
             if (ft > 0.01) {
                 var fg = FOG[dim];
-                ctx.fillStyle = "rgba(" + fg[0] + "," + fg[1] + "," + fg[2] + "," + (ft * 0.55).toFixed(3) + ")";
+                ctx.fillStyle = "rgba(" + fg[0] + "," + fg[1] + "," + fg[2] + "," + (ft * 0.35).toFixed(3) + ")";
                 ctx.fill();
             }
         }
@@ -1112,8 +1115,8 @@
                 if (tc2) cv = face.n[1] > 0 ? (tc2.top || tc2.side) : tc2.side;
                 if (cv && dist < 55) drawTexFace(pts, cv, 1 - face.f, dist);   // 方块纹理距离拉到 55 米
                 else drawFlatFace(pts, face.c, 1 - face.f, dist);
-                // 侧面垂直光照过渡（上亮下暗，仅近处），顶面不加
-                if (face.n[1] === 0 && dist < 20) faceShadeGrad(pts, 0.07);
+                // 侧面垂直光照过渡已移除（避免渐变柔化画面），靠面明暗区分
+                if (false && face.n[1] === 0 && dist < 20) faceShadeGrad(pts, 0.07);
                 // 方块轮廓描边（近处，边界清晰）
                 if (dist < 35 && w >= 0.3 && h >= 0.3) {
                     ctx.strokeStyle = "rgba(0,0,0,0.45)";

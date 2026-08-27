@@ -72,6 +72,7 @@
         .card.game .go { background: #ff8c00; }
         .card.surv .go { background: #4dd0e1; }
         .card.npc .go { background: #da77f2; }
+        .card.quiz .go { background: #51cf66; }
         /* ===== 冒险纪录面板 ===== */
         .records {
             display: inline-block;
@@ -120,6 +121,13 @@
             <p>认识冒险岛的朋友们：老村长、剑士、精灵、女巫……还能和他们说话！</p>
             <span class="go">▶ 认识他们</span>
         </a>
+
+        <a class="card quiz" href="quiz.html">
+            <span class="icon">🧠</span>
+            <h2>脑筋急转弯</h2>
+            <p>开动小脑筋！农夫的金斧头、越洗越脏的东西……你能答对几题？</p>
+            <span class="go">▶ 开始挑战</span>
+        </a>
     </div>
 
     <!-- 冒险纪录（本机保存） -->
@@ -127,17 +135,20 @@
         <h2>🏆 我的冒险纪录</h2>
         <div class="rec-item">🎲 冒险小游戏最高纪录：<b id="recHiscore">0</b> 冒险币</div>
         <div class="rec-item">⛏️ 像素生存世界星星：<b id="recStars">0</b> 颗 ⭐</div>
+        <div class="rec-item">🧠 脑筋急转弯最高分：<b id="recQuiz">0</b> 分</div>
         <div class="rec-tip">纪录存在本机浏览器里，玩游戏时会自动更新～</div>
     </div>
 
     <p class="sign">—— 冒险家1号 ——</p>
 
     <script>
-        // 读取两个游戏的纪录并显示在大厅
+        // 读取游戏的纪录并显示在大厅
         var recH = Number(localStorage.getItem("adventure_hiscore") || 0);
         var recS = Number(localStorage.getItem("survival_stars") || 0);
+        var recQ = Number(localStorage.getItem("quiz_hiscore") || 0);
         document.getElementById("recHiscore").textContent = recH;
         document.getElementById("recStars").textContent = recS;
+        document.getElementById("recQuiz").textContent = recQ;
     </script>
 </body>
 </html>

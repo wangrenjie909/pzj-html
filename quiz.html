@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>🧠 冒险岛 · 脑筋急转弯</title>
+    <style>
+        body {
+            background: linear-gradient(to bottom, #aee6ff, #e8f7ff);
+            color: #333;
+            font-family: "Microsoft YaHei", sans-serif;
+            text-align: center;
+            margin: 0;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #ff8c00;
+            font-size: 46px;
+            margin-top: 36px;
+            text-shadow: 2px 2px 0 #fff;
+        }
+        .welcome { font-size: 18px; color: #4a90d9; margin-bottom: 18px; }
+        .box {
+            display: inline-block;
+            background: #fff;
+            width: 620px; max-width: 94%;
+            border-radius: 24px;
+            border: 4px solid #ffd43b;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+            padding: 24px 28px;
+            text-align: center;
+            position: relative;
+        }
+        #progress { font-size: 16px; color: #888; margin-bottom: 8px; }
+        .bar { width: 100%; height: 14px; background: #eee; border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+        #fill { height: 100%; width: 0%; background: linear-gradient(to right, #ffd43b, #ff8c00); transition: width 0.4s; }
+        #q { font-size: 21px; font-weight: bold; color: #333; min-height: 52px; line-height: 1.6; margin-bottom: 20px; }
+
+        /* ===== 立体物品选项（点击物品作答，不显示名称） ===== */
+        .items {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            max-width: 460px;
+            margin: 0 auto;
+        }
+        .item {
+            background: linear-gradient(145deg, #fdfcfb, #eef4fa);
+            border: 3px solid #cfdce8;
+            border-radius: 20px;
+            height: 120px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12), inset 0 -10px 14px rgba(0, 0, 0, 0.05);
+            transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+        }
+        .item:hover { transform: translateY(-6px) scale(1.04); box-shadow: 0 12px 22px rgba(0, 0, 0, 0.18); }
+        .item .big { font-size: 72px; line-height: 1; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.25)); }
+        /* 立体底座（椭圆阴影，像物品放在桌面上） */
+        .item::after {
+            content: "";
+            position: absolute; bottom: 12px; left: 50%;
+            transform: translateX(-50%);
+            width: 56px; height: 10px;
+            background: radial-gradient(ellipse, rgba(0,0,0,0.22), transparent 70%);
+            border-radius: 50%;
+        }
+        .item:disabled { cursor: default; }
+        .item.correct { border-color: #37b24d; background: #e9fbe9; animation: bounce 0.6s ease; }
+        .item.correct .big { filter: drop-shadow(0 0 10px #69db7c); }
+        .item.wrong { border-color: #e03131; background: #ffe9e9; animation: shake 0.5s ease; }
+        .item.solution { border-color: #37b24d; box-shadow: 0 0 14px #69db7c; }
+
+        @keyframes bounce { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-22px); } }
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            20% { transform: translateX(-10px); }
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-7px); }
+            80% { transform: translateX(7px); }
+        }
+        /* ===== 通过 / 失败动画（大图标弹出来） ===== */
+        #anim {
+            position: absolute; inset: 0;
+            display: none;
+            align-items: center; justify-content: center;
+            flex-direction: column;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.85);
+            z-index: 5;
+        }
+        #anim .face { font-size: 120px; animation: popIn 0.45s ease; }
+        #anim .txt { font-size: 30px; font-weight: bold; margin-top: 10px; animation: popIn 0.45s ease 0.1s both; }
+        #anim.ok .txt { color: #37b24d; }
+        #anim.bad .txt { color: #e03131; }
+        #anim .sub { font-size: 17px; color: #666; margin-top: 8px; }
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.35); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        #msg { font-size: 17px; font-weight: bold; min-height: 26px; margin-top: 14px; color: #e03131; }
+        #score { font-size: 18px; color: #ff8c00; font-weight: bold; margin-top: 14px; }
+        .his { font-size: 15px; color: #999; margin-top: 6px; }
+        #result {
+            display: none;
+            background: #fff;
+            width: 480px; max-width: 92%;
+            border-radius: 24px;
+            border: 4px solid #ffd43b;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+            padding: 30px;
+            margin: 10px auto;
+        }
+        #result h2 { color: #ff8c00; margin: 0 0 10px; }
+        #final { font-size: 26px; font-weight: bold; color: #333; margin: 12px 0; }
+        #comment { font-size: 18px; color: #4a90d9; margin-bottom: 18px; }
+        .btn {
+            display: inline-block;
+            font-size: 18px; padding: 12px 30px;
+            border: none; border-radius: 30px; cursor: pointer;
+            background: #ff8c00; color: #fff; margin: 6px;
+            text-decoration: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn.gray { background: #4a90d9; }
+        .sign { color: #888; margin-top: 26px; padding-bottom: 40px; }
+    </style>
+</head>
+<body>
+    <h1>🧠 冒险岛 · 脑筋急转弯</h1>
+    <p class="welcome">看物品猜答案！点击你认为正确的物品，动动小脑筋～</p>
+
+    <div class="box" id="quizBox">
+        <div id="progress">第 1 / 10 题</div>
+        <div class="bar"><div id="fill"></div></div>
+        <div id="q">题目加载中……</div>
+        <div class="items" id="items"></div>
+        <div id="msg"></div>
+        <div id="score">得分：0</div>
+        <div class="his" id="his">🏆 最高分：0</div>
+        <!-- 通过/失败动画层 -->
+        <div id="anim"><span class="face"></span><div class="txt"></div><div class="sub"></div></div>
+    </div>
+
+    <div id="result">
+        <h2>🎉 闯关完成！</h2>
+        <div id="final">得分 0 / 100</div>
+        <div id="comment"></div>
+        <button class="btn" onclick="restart()">🔄 再来一局</button>
+        <a class="btn gray" href="index.html">🏠 返回大厅</a>
+    </div>
+
+    <p class="sign">—— 冒险家1号 ——</p>
+
+    <script>
+        // ===== 题库：点击物品作答（物品不显示名称） =====
+        var QUIZ = [
+            { q: "农夫的斧头掉进河里，凶巴巴的河神逼你选一样……你会拿哪个？", items: ["🌿", "🪓", "✨", "🥈"], a: 0, fail: ["", "🪓 三把斧头砸中你的脑袋！失败", "🔱 河神大怒把你打死了！失败", "🔱 河神大怒把你打死了！失败"] },
+            { q: "什么东西越洗越脏？", items: ["💧", "👕", "🧼", "✋"], a: 0 },
+            { q: "什么伞不能挡雨？", items: ["☔", "🌂", "🪂", "🛸"], a: 2 },
+            { q: "什么门永远关不上？", items: ["🚪", "⚽", "🏠", "🏟️"], a: 1 },
+            { q: "什么东西天气越热它爬得越高？", items: ["🌡️", "🐌", "🎈", "🌿"], a: 0 },
+            { q: "什么路不能走？", items: ["🛣️", "⚡", "🛤️", "🛑"], a: 1 },
+            { q: "什么动物打死了，流的是你的血？", items: ["🦟", "🐯", "🐍", "🦈"], a: 0 },
+            { q: "什么花不能摘？", items: ["🌹", "🔥", "🌼", "🌸"], a: 1 },
+            { q: "什么杯不能用来喝水？", items: ["🍵", "🏆", "🥤", "🥛"], a: 1 },
+            { q: "什么布剪不断？", items: ["👕", "🌊", "🧵", "🌾"], a: 1 }
+        ];
+        var cur = 0, score = 0;
+        var best = Number(localStorage.getItem("quiz_hiscore") || 0);
+
+        function showQ() {
+            document.getElementById("anim").style.display = "none";
+            document.getElementById("msg").textContent = "";
+            document.getElementById("progress").textContent = "第 " + (cur + 1) + " / " + QUIZ.length + " 题";
+            document.getElementById("fill").style.width = (cur / QUIZ.length * 100) + "%";
+            document.getElementById("q").textContent = QUIZ[cur].q;
+            var items = QUIZ[cur].items;
+            var h = "";
+            for (var i = 0; i < items.length; i++) {
+                h += '<div class="item" id="item' + i + '" onclick="answer(' + i + ')">' +
+                     '<span class="big">' + items[i] + '</span></div>';
+            }
+            document.getElementById("items").innerHTML = h;
+            document.getElementById("score").textContent = "得分：" + score;
+        }
+
+        function answer(i) {
+            var els = document.querySelectorAll(".item");
+            for (var k = 0; k < els.length; k++) els[k].disabled = true;
+            var anim = document.getElementById("anim");
+            var face = anim.querySelector(".face");
+            var txt = anim.querySelector(".txt");
+            var sub = anim.querySelector(".sub");
+            if (i === QUIZ[cur].a) {
+                document.getElementById("item" + i).className = "item correct";
+                score += 10;
+                document.getElementById("score").textContent = "得分：" + score;
+                anim.className = "ok";
+                face.textContent = "✅";
+                txt.textContent = "过关！";
+                sub.textContent = "+10 分";
+                anim.style.display = "flex";
+                setTimeout(next, 1500);
+            } else {
+                document.getElementById("item" + i).className = "item wrong";
+                document.getElementById("item" + QUIZ[cur].a).className = "item solution";   // 亮出正确答案
+                anim.className = "bad";
+                face.textContent = "❌";
+                txt.textContent = "失败！";
+                sub.textContent = (QUIZ[cur].fail && QUIZ[cur].fail[i]) ? QUIZ[cur].fail[i] : "正确答案已亮出～";
+                anim.style.display = "flex";
+                setTimeout(next, 1800);
+            }
+        }
+
+        function next() {
+            cur++;
+            if (cur >= QUIZ.length) { finish(); return; }
+            showQ();
+        }
+
+        function finish() {
+            document.getElementById("quizBox").style.display = "none";
+            if (score > best) {
+                best = score;
+                try { localStorage.setItem("quiz_hiscore", String(best)); } catch (e) {}
+            }
+            document.getElementById("final").textContent = "得分 " + score + " / " + (QUIZ.length * 10);
+            var c = score >= 90 ? "🌟 满分冒险家！你就是冒险岛学霸！"
+                : score >= 70 ? "👍 很厉害！离满分就差一点点！"
+                : score >= 50 ? "💪 不错哦！多玩几次就能全对啦！"
+                : "🎈 加油！去游戏里多学学知识再来挑战！";
+            document.getElementById("comment").textContent = c;
+            document.getElementById("result").style.display = "block";
+        }
+
+        function restart() {
+            cur = 0; score = 0;
+            document.getElementById("quizBox").style.display = "inline-block";
+            document.getElementById("result").style.display = "none";
+            showQ();
+        }
+
+        // 开场
+        document.getElementById("his").textContent = "🏆 最高分：" + best;
+        showQ();
+    </script>
+</body>
+</html>
